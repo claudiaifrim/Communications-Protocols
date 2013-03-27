@@ -36,7 +36,7 @@ int main(void)
 	printf("[RECEIVER] Message type: %d\n", p.type);
 	/* Extract filename */
 	memcpy(filename, p.payload, t.len - sizeof(int));
-	sprintf(filename, "%s_recv", filename);
+	sprintf(filename, "%s_recv", filename);//numele fisierului ce va fi creat
 	printf("[RECEIVER] Filename: %s\n", filename);
 
 	/* Send ACK for filename */	
@@ -44,8 +44,8 @@ int main(void)
 	memset(p.payload, 0, sizeof(p.payload));
 	
 	p.type = TYPE4;
-	memcpy(p.payload, ACK_T1, strlen(ACK_T1));
-  	t.len = strlen(p.payload) + 1 + sizeof(int);
+	memcpy(p.payload, ACK_T1, strlen(ACK_T1));//ACK_T1 e un string
+  	t.len = strlen(p.payload) + 1 + sizeof(int);//de ce +1 ?
 	memcpy(t.payload, &p, t.len);
   	send_message(&t);
 
@@ -95,7 +95,7 @@ int main(void)
 			return -1;
 		}
 
-		read_so_far += t.len - sizeof(int);
+		read_so_far += t.len - sizeof(int); //adica count (nr bytes cititi in sender)
 		write(fd, p.payload, t.len - sizeof(int));;
 		
 		memset(t.payload, 0, sizeof(t.payload));

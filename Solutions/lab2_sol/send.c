@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include "lib.h"
+#include "lib.h"	
 
 #define HOST 	"127.0.0.1"
 #define PORT 	10000
@@ -40,10 +40,11 @@ int main(int argc, char *argv[])
 	memset(t.payload, 0, sizeof(t.payload));
 	memset(p.payload, 0, sizeof(p.payload));
 	
-	p.type = TYPE1;	
-	memcpy(p.payload, argv[1], strlen(argv[1]));
-	t.len = sizeof(int) + strlen(argv[1]);
-	memcpy(t.payload, &p, t.len); 
+	p.type = TYPE1;	//TYPE1 trimite numele fisier
+	memcpy(p.payload, argv[1], strlen(argv[1])); //pune in my_pkt.payload numele fisierului de trimis
+	t.len = sizeof(int) + strlen(argv[1]);//t.len==lungimea pachetului p (my_pkt)
+										  //int (type) + strlen(nume) (numele fisierului)
+	memcpy(t.payload, &p, t.len); 		  //pune in t.payload pe p
 	send_message(&t);
 	printf("[SENDER] Filename sent.\n");
 
@@ -65,8 +66,8 @@ int main(int argc, char *argv[])
 	memset(p.payload, 0, sizeof(p.payload));
 	
 	p.type = TYPE2;
-	memcpy(p.payload, &filesize, sizeof(int));
-	t.len = sizeof(int) * 2;
+	memcpy(p.payload, &filesize, sizeof(int)); //adauga lungime fisier
+	t.len = sizeof(int) * 2;	//2 inturi :type+filesize
 	memcpy(t.payload, &p, t.len);
 	send_message(&t);
 	printf("[SENDER] Filesize sent.\n");
@@ -87,12 +88,13 @@ int main(int argc, char *argv[])
 	/* Send file contents - TYPE 3 messages */
 	printf("[SERVER] File transfer begins.\n");
 	while((count = read(fd, buffer, MSGSIZE - sizeof(int))) > 0) {
+		//face MSGSIZE - sizeof(int) ca sa poata adauga si intul de la type la payload
 		memset(t.payload, 0, sizeof(t.payload));
 		memset(p.payload, 0, sizeof(p.payload));
 		
 		p.type = TYPE3;
 		memcpy(p.payload, buffer, count);
-		t.len = sizeof(int) + count;
+		t.len = sizeof(int) + count; //type + nr bytes cititi
 		memcpy(t.payload, &p, t.len);
 		send_message(&t);
 
