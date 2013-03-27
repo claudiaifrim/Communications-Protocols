@@ -1,0 +1,18 @@
+* PC, Tema1 *
+
+Compilare: make
+Pornire + verificare transfer: ./run_experiment.sh
+
+Unităti de măsură pentru parametrii din script:
+	* SPEED: Mb/s
+	* DELAY: ms
+	* LOSS: procentaj cadre pierdute
+	* CORRUPT: procentaj cadre corupte
+
+Domeniu de valori:
+	* SPEED = 5 .. 20 Mb/s
+	* DELAY = 10 ... 1000 ms
+	* LOSS = 0 ... 10 %
+	* CORRUPT = 0 .. 10% / 100 %
+	* TASK_INDEX = 0, 1, 2, 3 și 4
+	

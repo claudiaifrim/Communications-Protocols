@@ -1,0 +1,60 @@
+Sender:
+
+-init host port
+-init buffer si lungime_buffer
+-init next_frame_to_send
+-open file (cu open()) (si argv)
+-afla lungime fisier (filestat)
+-trimite nume fisier si dimensiune
+
+-citim in buffer din fisier 5 bytes (returneaza cati bytes s-au cit)
+
+while(1){
+	punem in payload ce am citit in buffer
+	setam lungimea payload
+	adaugam la sf payload ext_frame_to_send
+	send la payload
+	if(recv_message){
+		daca (ultimul byte din ce am primit == next_frame_to_send ){
+			//e ok
+			citim in buffer din fisier
+			daca s-a terminat fisierul break;
+			schimbam next_frame_to_send
+		}	
+	}
+}
+
+//adaugam la payload STOP + next_frame_to_send
+//setam lungime payload
+//send message
+
+END
+
+Receiver:
+
+init host port
+init frame_expected = 0
+
+primim nume fisier in payload si dimensiune in len
+deschidem fisier cu nume primit
+memoram dimensiunea fisierului
+
+while(1){
+	recv_message
+	scoatem ultimul byte din ce am primit
+	daca byte == frame_expected
+		send ACK care are la sfarsit frame_expected
+		schimba_frame_expected
+		scrie in fiser
+		scade din dimensiune cat a scris
+		daca dim <0 break;
+	else
+		send NACK care are la sfarsit ultimul byte
+
+}
+
+printf(shutting down)
+
+END
+
+

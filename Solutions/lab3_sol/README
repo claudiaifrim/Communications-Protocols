@@ -1,0 +1,15 @@
+* PC, laborator3 *
+
+Rulare schelet de cod:
+	make
+	./run_experiment
+
+Procentajul de cadre eronate poate fi setat
+prin variabila CORRUPT.
+Ex: 
+CORRUPT=0 	- nu există cadre corupte
+CORRUPT=100	- toate cadrele sunt corupte
+
+Pentru exemplul implementat(PKTS_NO=20),
+	CORRUPT=0   - receptorul afișează 0 (cadre corupte)
+	CORRUPT=100 - receptorul afișează 20 (cadre corupute)

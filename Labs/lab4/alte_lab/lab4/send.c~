@@ -1,0 +1,73 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "lib.h"
+
+#define HOST "127.0.0.1"
+#define PORT 10000
+
+int main(int argc, char *argv[])
+{
+	msg t;
+	int i, res;
+	int hi;
+	int BDP = atoi(argv[1]);
+	int dimF = BDP / (MSGSIZE * 8);
+	dimF *= 1000;
+	dimF = 10;
+	printf("%d", dimF);	
+	printf("[SENDER] Starting.\n");	
+	init(HOST, PORT);
+	
+	
+
+	printf("[SENDER]: BDP=%d\n",  BDP);
+	printf("[SENDER]: dimF=%d\n", dimF); 
+	
+	for( i=0; i<dimF; i++) {
+	
+	printf("Trimit mesaj %d fara confirmare \n", i);
+	memset(&t, 0, sizeof(msg));
+		fflush(stdout);
+		
+	t.len = MSGSIZE;
+	res = send_message(&t);
+	if( res < 0 ) {
+		perror("[Sender] Send error. Exiting. \n");
+		return -1;
+		}
+	
+	}	
+	
+	
+	for (i = 0; i < COUNT; i++) {
+		/* cleanup msg */
+		memset(&t, 0, sizeof(msg));
+		
+		/* gonna send an empty msg */
+		t.len = MSGSIZE;
+		
+		/* send msg */
+		res = send_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Send error. Exiting.\n");
+			return -1;
+		}
+		
+		/* wait for ACK */
+		res = recv_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Receive error. Exiting.\n");
+			return -1;
+		}
+	}
+
+	printf("[SENDER] Job done, all sent.\n");
+		
+	return 0;
+}
