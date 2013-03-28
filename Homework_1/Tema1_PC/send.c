@@ -15,11 +15,12 @@ static char *filename;
 static int task_index, speed, delay;
 int task_0()
 {
-	int i,res,f;
+	int i,res,f,count;
 	my_pkt p;
 	long bdp,window;
 	int file_size;
 	struct stat f_status;
+	char buffer[MSGSIZE];
 	/* miliseconds for delay & megabits for speed */	
 	bdp = speed * delay * 1000;
 	printf("[SENDER] BDP = %ld b(bits).\n", bdp);
@@ -97,9 +98,17 @@ int task_0()
 	memset(&t, 0, sizeof(msg));
 
 	/* Fill the link = send window messages */
-	for (i = 0; i < window; i++) {
-		/* gonna send an empty msg */	
-		t.len = MSGSIZE;
+	for (i = 0; i < window && 
+		(count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
+		/*face MSGSIZE - sizeof(int) ca sa poata adauga si 
+		intul de la type la payload*/
+		memset(t.payload, 0, sizeof(t.payload));
+		memset(p.payload, 0, sizeof(p.payload));
+
+		p.type = TYPE3;
+		memcpy(p.payload, buffer, count);
+		t.len = sizeof(int) + count; //type + nr bytes cititi
+		memcpy(t.payload, &p, t.len);
 		
 		/* send msg */
 		res = send_message(&t);
@@ -111,17 +120,31 @@ int task_0()
 
 	/* From now on, ack clocking, i.e., a new ack will inform 
 	   us about the space released in the link */
-	for (i = 0; i < file_size - window; i++) {
+	for (i = 0; i < (file_size - window) && 
+		(count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
 		/* wait for ACK */
 		res = recv_message(&t);
 		if (res < 0) {
 			perror("[SENDER] Receive error. Exiting.\n");
 			return -1;
 		}
-		printf("[SENDER]Sedining %d \n",i);	
+		/*recieve ack*/
+		p = *((my_pkt *) t.payload);
+		if (p.type != TYPE4) { //adica ack
+			perror("[SENDER] Receive error");
+			return -1;
+		}
 
-		/* gonna send an empty msg */
-		t.len = MSGSIZE;
+		printf("[SENDER]Sedining %d \n",i);	
+		/*face MSGSIZE - sizeof(int) ca sa poata adauga si 
+		intul de la type la payload*/
+		memset(t.payload, 0, sizeof(t.payload));
+		memset(p.payload, 0, sizeof(p.payload));
+
+		p.type = TYPE3;
+		memcpy(p.payload, buffer, count);
+		t.len = sizeof(int) + count; //type + nr bytes cititi
+		memcpy(t.payload, &p, t.len);
 		
 		/* send msg */
 		res = send_message(&t);
@@ -134,14 +157,21 @@ int task_0()
 	/* so far: file_size x send
 	(COUNT - window) x ack
 	So we need to wait for another 'window' acks */
-	for (i = 0; i < window; i++) {
+	for (i = 0; i < window && 
+		(count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
 	/* send msg */
+		p = *((my_pkt *) t.payload);
+		if (p.type != TYPE4) { //adica ack
+			perror("[SENDER] Receive error");
+			return -1;
+		}
 		res = recv_message(&t);
 		if (res < 0) {
 			perror("[SENDER] Receive error. Exiting.\n");
 			return -1;
 		}
 	}
+	close(f);
 	printf("[SENDER] Job done.\n");
 
 	return 0;

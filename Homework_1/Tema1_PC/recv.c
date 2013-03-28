@@ -11,7 +11,7 @@ static char *filename;
 int task_0() 
 {
 	my_pkt p;
-	int i, res;
+	int i=0, res,read_so_far,f;
 	int file_size;
 	char *filename_out;
 	printf("[RECEIVER] Receiver begins.\n");
@@ -73,7 +73,10 @@ int task_0()
   	memcpy(t.payload, &p, t.len);
   	send_message(&t);
 
-  	for (i = 0; i < file_size; i++) {
+	read_so_far = 0;
+	f = open(filename_out, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+  	while(read_so_far < file_size) {
 		/* cleanup msg */
   		memset(&r, 0, sizeof(msg));
 
@@ -84,15 +87,31 @@ int task_0()
   			return -1;
   		}
 
+		p = *((my_pkt*) r.payload);
+		if (p.type != TYPE3) {
+			perror("[RECEIVER] Receive message");
+			return -1;
+		}
+
+		read_so_far += r.len - sizeof(int); //adica count (nr bytes cititi in sender)
+		write(f, p.payload, r.len - sizeof(int));;
+		
+		memset(r.payload, 0, sizeof(r.payload));
+		memset(p.payload, 0, sizeof(p.payload));
+	
+		p.type = TYPE4;
+		memcpy(p.payload, ACK_T3, strlen(ACK_T3));
+	  	r.len = strlen(p.payload) + sizeof(int);
+		memcpy(r.payload, &p, r.len);
+  		send_message(&r);
 		/* send dummy ACK */
-  		printf("[RECIEVER] Sending ACK %i\n",i);
   		res = send_message(&r);
   		if (res < 0) {
   			perror("[RECEIVER] Send ACK error. Exiting.\n");
   			return -1;
   		}
   	}
-
+  	close(f);
   	printf("[RECEIVER] All done.\n");
 
   	return 0;
