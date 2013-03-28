@@ -7,11 +7,26 @@
 #include <sys/stat.h>
 
 #include "lib.h"
+#define FRAME_SIZE	1404
+#define BITS_NO		8
+
 static msg t;
 static char *filename;
 static int task_index, speed, delay;
 int task_0()
 {
+	long bdp,window;
+	/* miliseconds for delay & megabits for speed */	
+	bdp = speed * delay * 1000;
+	printf("[SENDER] BDP = %ld b(bits).\n", bdp);
+
+	/* window = number of frames in the 'network', unacked */
+	window = bdp / (FRAME_SIZE * BITS_NO); 
+	printf("[SENDER] window = %ld frames\n", window);
+
+	/* cleanup msg */
+//	memset(&t, 0, sizeof(msg));
+
 
 	sprintf(t.payload, "Hello World of PC");
 	t.len = strlen(t.payload) + 1;
