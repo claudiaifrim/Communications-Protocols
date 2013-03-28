@@ -18,6 +18,6 @@ sleep 1
 
 ./send $TASK_INDEX $FILENAME $SPEED $DELAY
 
-sleep 5
-echo "[SCRIPT] Finished transfer, checking files: $FILENAME recv_$FILENAME"
-diff $FILENAME recv_$FILENAME
+#sleep 5
+#echo "[SCRIPT] Finished transfer, checking files: $FILENAME recv_$FILENAME"
+#diff $FILENAME recv_$FILENAME
