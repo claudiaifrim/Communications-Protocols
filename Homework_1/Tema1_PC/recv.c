@@ -10,10 +10,9 @@ static int task_index;
 static char *filename;
 int task_0() 
 {
-	msg r;
 	my_pkt p;
 	int i, res;
-	long file_size=1000;
+	int file_size;
 	char *filename_out;
 	printf("[RECEIVER] Receiver begins.\n");
 	/* Wait for filename */	
@@ -22,13 +21,13 @@ int task_0()
 		perror("[RECEIVER] Receive message");
 		return -1;
 	}
-	printf("I'm here 1\n");
+	
 	p = *((my_pkt*) t.payload);
 	if (p.type != TYPE1) {
 		perror("[RECEIVER] Receive message");
 		return -1;
 	}
-	printf("I'm here 2\n");
+	
 	/* Extract filename */
 	filename =(char *) malloc((t.len-sizeof(int)));
 	filename_out =(char *) malloc((t.len-sizeof(int))+strlen("recv_"));
@@ -47,6 +46,32 @@ int task_0()
   	t.len = strlen(p.payload) + 1 + sizeof(int);//de ce +1 ?
   	memcpy(t.payload, &p, t.len);
   	send_message(&t);
+	/* Wait for file_size */
+  	memset(t.payload, 0, sizeof(t.payload));
+  	if (recv_message(&t) < 0) {
+  		perror("Receive message");
+  		return -1;
+  	}
+
+  	p = *((my_pkt*) t.payload);
+  	if (p.type != TYPE2) {
+  		perror("[RECEIVER] Receive message");
+  		return -1;
+  	}
+
+  	printf("[RECEIVER] Message type: %d\n", p.type);
+  	memcpy(&file_size, p.payload, sizeof(int));
+  	printf("[RECEIVER] file_size: %d\n", file_size);
+
+	/* Send ACK for file_size */
+  	memset(t.payload, 0, sizeof(t.payload));
+  	memset(p.payload, 0, sizeof(p.payload));
+
+  	p.type = TYPE4;
+  	memcpy(p.payload, ACK_T2, strlen(ACK_T2));
+  	t.len = strlen(p.payload) + sizeof(int);
+  	memcpy(t.payload, &p, t.len);
+  	send_message(&t);
 
   	for (i = 0; i < file_size; i++) {
 		/* cleanup msg */
@@ -60,7 +85,7 @@ int task_0()
   		}
 
 		/* send dummy ACK */
-		printf("[RECIEVER] Sending ACK %i\n",i);
+  		printf("[RECIEVER] Sending ACK %i\n",i);
   		res = send_message(&r);
   		if (res < 0) {
   			perror("[RECEIVER] Send ACK error. Exiting.\n");

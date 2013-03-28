@@ -17,7 +17,8 @@ int task_0()
 {
 	int i,res,f;
 	my_pkt p;
-	long bdp,window,file_size=1000;
+	long bdp,window;
+	int file_size;
 	struct stat f_status;
 	/* miliseconds for delay & megabits for speed */	
 	bdp = speed * delay * 1000;
@@ -27,47 +28,74 @@ int task_0()
 	window = bdp / (FRAME_SIZE * BITS_NO); 
 	printf("[SENDER] window = %ld frames\n", window);
 
-	/* cleanup msg */
-	memset(&t, 0, sizeof(msg));
+	
 
 	/*opening file and getting size*/
 	f = open(filename, O_RDONLY);
 	fstat(f,&f_status);
 	file_size = (long) f_status.st_size;
-	printf("[SENDER] File size: %ld\n", file_size);
+	printf("[SENDER] File size: %d\n", file_size);
 
-	// /* Gonna send filename - TYPE 1 message */
-	// memset(t.payload, 0, sizeof(t.payload));
-	// memset(p.payload, 0, sizeof(p.payload));
+	/* Gonna send filename - TYPE 1 message */
+	memset(t.payload, 0, sizeof(t.payload));
+	memset(p.payload, 0, sizeof(p.payload));
 	
-	// p.type = TYPE1;	/*TYPE1 trimite numele fisier*/
-	// /*pune in my_pkt.payload numele fisierului de trimis*/
-	// printf("[SENDER]Filename is %s\n",filename);
-	// memcpy(p.payload, filename, strlen(filename)); 
-	// /*t.len==lungimea pachetului p (my_pkt)
-	// int (type) + strlen(nume) (numele fisierului)*/
-	// t.len = sizeof(int) + strlen(filename);
+	p.type = TYPE1;	/*TYPE1 trimite numele fisier*/
+	/*pune in my_pkt.payload numele fisierului de trimis*/
+	printf("[SENDER]Filename is %s\n",filename);
+	memcpy(p.payload, filename, strlen(filename)); 
+	/*t.len==lungimea pachetului p (my_pkt)
+	int (type) + strlen(nume) (numele fisierului)*/
+	t.len = sizeof(int) + strlen(filename);
 	
-	// memcpy(t.payload, &p, t.len); 		  
-	// send_message(&t);
-	// printf("[SENDER] Filename sent.\n");
+	memcpy(t.payload, &p, t.len); 		  
+	send_message(&t);
+	printf("[SENDER] Filename sent.\n");
 
-	// /* Wait for filename ACK */	
-	// if (recv_message(&t) < 0) {
-	// 	perror("[SENDER] Receive error");
-	// 	return -1;
-	// }
+	/* Wait for filename ACK */	
+	if (recv_message(&t) < 0) {
+		perror("[SENDER] Receive error");
+		return -1;
+	}
 
-	// /*ia valoarea din t.payload si face cast*/
-	// p = *((my_pkt *) t.payload);
-	// if (p.type != TYPE4) {
-	// 	printf("Tipul este%d\n",p.type );
-	// 	perror("[SENDER] Receive error.Wrong TYPE");
-	// 	return -1;
-	//}
+	/*ia valoarea din t.payload si face cast*/
+	p = *((my_pkt *) t.payload);
+	if (p.type != TYPE4) {
+		printf("Tipul este%d\n",p.type );
+		perror("[SENDER] Receive error.Wrong TYPE");
+		return -1;
+	}
 
 	printf("[SENDER] Got reply with payload: %s\n", p.payload);
+
+	/* Gonna send file_size - TYPE 2 message */
+	memset(t.payload, 0, sizeof(t.payload));
+	memset(p.payload, 0, sizeof(p.payload));
 	
+	p.type = TYPE2;
+	memcpy(p.payload, &file_size, sizeof(int)); //adauga lungime fisier
+	t.len = sizeof(int) * 2;	//2 inturi :type+file_size
+	memcpy(t.payload, &p, t.len);
+	send_message(&t);
+	printf("[SENDER] file_size sent %d.\n",file_size);
+	
+	/* Wait for file_size ACK */	
+	if (recv_message(&t) < 0) {
+		perror("[SENDER] Receive error");
+		return -1;
+	}
+	
+	p = *((my_pkt *) t.payload);
+	if (p.type != TYPE4) {
+		perror("[SENDER] Receive error");
+		return -1;
+	}
+	printf("[SENDER] Got reply with payload: %s\n", p.payload);
+
+
+	/* cleanup msg */
+	memset(&t, 0, sizeof(msg));
+
 	/* Fill the link = send window messages */
 	for (i = 0; i < window; i++) {
 		/* gonna send an empty msg */	
@@ -104,119 +132,119 @@ int task_0()
 	}
 
 	/* so far: file_size x send
-		   (COUNT - window) x ack
-	   So we need to wait for another 'window' acks */
-		   for (i = 0; i < window; i++) {
-		/* send msg */
-		   	res = recv_message(&t);
-		   	if (res < 0) {
-		   		perror("[SENDER] Receive error. Exiting.\n");
-		   		return -1;
-		   	}
-		   }
-		   printf("[SENDER] Job done.\n");
-
-		   return 0;
+	(COUNT - window) x ack
+	So we need to wait for another 'window' acks */
+	for (i = 0; i < window; i++) {
+	/* send msg */
+		res = recv_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Receive error. Exiting.\n");
+			return -1;
 		}
-		int task_1()
-		{
+	}
+	printf("[SENDER] Job done.\n");
 
-			sprintf(t.payload, "Hello World of PC");
-			t.len = strlen(t.payload) + 1;
-			send_message(&t);
+	return 0;
+}
+int task_1()
+{
 
-			if (recv_message(&t) < 0) {
-				perror("[SENDER] receive error");
-			} else {
-				printf("[SENDER] Got reply with payload: %s\n", t.payload);
-			}
+	sprintf(t.payload, "Hello World of PC");
+	t.len = strlen(t.payload) + 1;
+	send_message(&t);
 
-			printf("[SENDER] Job done.\n");
+	if (recv_message(&t) < 0) {
+		perror("[SENDER] receive error");
+	} else {
+		printf("[SENDER] Got reply with payload: %s\n", t.payload);
+	}
 
-			return 0;
-		}
-		int task_2()
-		{
+	printf("[SENDER] Job done.\n");
 
-			sprintf(t.payload, "Hello World of PC");
-			t.len = strlen(t.payload) + 1;
-			send_message(&t);
+	return 0;
+}
+int task_2()
+{
 
-			if (recv_message(&t) < 0) {
-				perror("[SENDER] receive error");
-			} else {
-				printf("[SENDER] Got reply with payload: %s\n", t.payload);
-			}
+	sprintf(t.payload, "Hello World of PC");
+	t.len = strlen(t.payload) + 1;
+	send_message(&t);
 
-			printf("[SENDER] Job done.\n");
+	if (recv_message(&t) < 0) {
+		perror("[SENDER] receive error");
+	} else {
+		printf("[SENDER] Got reply with payload: %s\n", t.payload);
+	}
 
-			return 0;
-		}
-		int task_3()
-		{
+	printf("[SENDER] Job done.\n");
 
-			sprintf(t.payload, "Hello World of PC");
-			t.len = strlen(t.payload) + 1;
-			send_message(&t);
+	return 0;
+}
+int task_3()
+{
 
-			if (recv_message(&t) < 0) {
-				perror("[SENDER] receive error");
-			} else {
-				printf("[SENDER] Got reply with payload: %s\n", t.payload);
-			}
+	sprintf(t.payload, "Hello World of PC");
+	t.len = strlen(t.payload) + 1;
+	send_message(&t);
 
-			printf("[SENDER] Job done.\n");
+	if (recv_message(&t) < 0) {
+		perror("[SENDER] receive error");
+	} else {
+		printf("[SENDER] Got reply with payload: %s\n", t.payload);
+	}
 
-			return 0;
-		}
-		int task_4()
-		{
+	printf("[SENDER] Job done.\n");
 
-			sprintf(t.payload, "Hello World of PC");
-			t.len = strlen(t.payload) + 1;
-			send_message(&t);
+	return 0;
+}
+int task_4()
+{
 
-			if (recv_message(&t) < 0) {
-				perror("[SENDER] receive error");
-			} else {
-				printf("[SENDER] Got reply with payload: %s\n", t.payload);
-			}
+	sprintf(t.payload, "Hello World of PC");
+	t.len = strlen(t.payload) + 1;
+	send_message(&t);
 
-			printf("[SENDER] Job done.\n");
+	if (recv_message(&t) < 0) {
+		perror("[SENDER] receive error");
+	} else {
+		printf("[SENDER] Got reply with payload: %s\n", t.payload);
+	}
 
-			return 0;
-		}
-		int main(int argc, char *argv[])
-		{
-			task_index = atoi(argv[1]);
-			filename = argv[2];
-			speed = atoi(argv[3]);
-			delay = atoi(argv[4]);
+	printf("[SENDER] Job done.\n");
 
-			printf("[SENDER] Sender starts.\n");
-			printf("[SENDER] Filename=%s, task_index=%d, speed=%d, delay=%d\n", filename, task_index, speed, delay);
+	return 0;
+}
+int main(int argc, char *argv[])
+{
+	task_index = atoi(argv[1]);
+	filename = argv[2];
+	speed = atoi(argv[3]);
+	delay = atoi(argv[4]);
 
-			init(HOST, PORT1);
+	printf("[SENDER] Sender starts.\n");
+	printf("[SENDER] Filename=%s, task_index=%d, speed=%d, delay=%d\n", filename, task_index, speed, delay);
 
-			switch (task_index){
-				case 0 :
-				task_0();
-				break;
-				case 1 :
-				task_1();
-				break;
-				case 2 :
-				task_2();
-				break;
-				case 3 :
-				task_3();
-				break;
-				case 4 :
-				task_4();
-				break;
-				default:
-				printf("Bad task\n");
-				return 0;
-			}
-			return 0;
-		}
+	init(HOST, PORT1);
+
+	switch (task_index){
+		case 0 :
+		task_0();
+		break;
+		case 1 :
+		task_1();
+		break;
+		case 2 :
+		task_2();
+		break;
+		case 3 :
+		task_3();
+		break;
+		case 4 :
+		task_4();
+		break;
+		default:
+		printf("Bad task\n");
+		return 0;
+	}
+	return 0;
+}
