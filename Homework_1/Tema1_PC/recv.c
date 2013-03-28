@@ -9,17 +9,29 @@ static msg r, t;
 static int task_index;
 int task_0() 
 {
+	msg r;
+	int i, res;
+	long file_size=1000;
+	printf("[RECEIVER] Receiver begins.\n");
 
-	if (recv_message(&r) < 0) {
-		perror("[RECEIVER] receive message");
-		return -1;
+	for (i = 0; i < file_size; i++) {
+		/* cleanup msg */
+		memset(&r, 0, sizeof(msg));
+		
+		/* wait for message */
+		res = recv_message(&r);
+		if (res < 0) {
+			perror("[RECEIVER] Receive error. Exiting.\n");
+			return -1;
+		}
+		
+		/* send dummy ACK */
+		res = send_message(&r);
+		if (res < 0) {
+			perror("[RECEIVER] Send ACK error. Exiting.\n");
+			return -1;
+		}
 	}
-
-	printf("[RECEIVER] Got msg with payload: %s\n", r.payload);
-
-	sprintf(t.payload, "ACK(%s)", r.payload);
-	t.len = strlen(t.payload + 1);
-	send_message(&t);
 
 	printf("[RECEIVER] All done.\n");
 	

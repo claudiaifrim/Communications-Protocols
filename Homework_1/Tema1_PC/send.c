@@ -15,7 +15,8 @@ static char *filename;
 static int task_index, speed, delay;
 int task_0()
 {
-	long bdp,window;
+	int i,res;
+	long bdp,window,file_size=1000;
 	/* miliseconds for delay & megabits for speed */	
 	bdp = speed * delay * 1000;
 	printf("[SENDER] BDP = %ld b(bits).\n", bdp);
@@ -25,19 +26,53 @@ int task_0()
 	printf("[SENDER] window = %ld frames\n", window);
 
 	/* cleanup msg */
-//	memset(&t, 0, sizeof(msg));
+	memset(&t, 0, sizeof(msg));
 
-
-	sprintf(t.payload, "Hello World of PC");
-	t.len = strlen(t.payload) + 1;
-	send_message(&t);
-
-	if (recv_message(&t) < 0) {
-		perror("[SENDER] receive error");
-	} else {
-		printf("[SENDER] Got reply with payload: %s\n", t.payload);
+	/* Fill the link = send window messages */
+	for (i = 0; i < window; i++) {
+		/* gonna send an empty msg */
+		t.len = MSGSIZE;
+		
+		/* send msg */
+		res = send_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Send error. Exiting.\n");
+			return -1;
+		}
 	}
 
+	/* From now on, ack clocking, i.e., a new ack will inform 
+	   us about the space released in the link */
+	for (i = 0; i < file_size - window; i++) {
+		/* wait for ACK */
+		res = recv_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Receive error. Exiting.\n");
+			return -1;
+		}
+
+		/* gonna send an empty msg */
+		t.len = MSGSIZE;
+		
+		/* send msg */
+		res = send_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Send error. Exiting.\n");
+			return -1;
+		}
+	}
+
+	/* so far: file_size x send
+		   (COUNT - window) x ack
+	   So we need to wait for another 'window' acks */
+	for (i = 0; i < window; i++) {
+		/* send msg */
+		res = recv_message(&t);
+		if (res < 0) {
+			perror("[SENDER] Receive error. Exiting.\n");
+			return -1;
+		}
+	}
 	printf("[SENDER] Job done.\n");
 	
 	 return 0;
