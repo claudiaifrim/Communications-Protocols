@@ -7,8 +7,8 @@
 #include <sys/stat.h>
 
 #include "lib.h"
-#define FRAME_SIZE	1404
-#define BITS_NO		8
+#define FRAME_SIZE  1404
+#define BITS_NO     8
 
 static msg t;
 static char *filename;
@@ -21,7 +21,7 @@ int task_0()
 	int file_size;
 	struct stat f_status;
 	char buffer[MSGSIZE];
-	/* miliseconds for delay & megabits for speed */	
+	/* miliseconds for delay & megabits for speed */    
 	bdp = speed * delay * 1000;
 	printf("[SENDER] BDP = %ld b(bits).\n", bdp);
 
@@ -41,7 +41,7 @@ int task_0()
 	memset(t.payload, 0, sizeof(t.payload));
 	memset(p.payload, 0, sizeof(p.payload));
 	
-	p.type = TYPE1;	/*TYPE1 trimite numele fisier*/
+	p.type = TYPE1; /*TYPE1 trimite numele fisier*/
 	/*pune in my_pkt.payload numele fisierului de trimis*/
 	printf("[SENDER]Filename is %s\n",filename);
 	memcpy(p.payload, filename, strlen(filename)); 
@@ -49,11 +49,11 @@ int task_0()
 	int (type) + strlen(nume) (numele fisierului)*/
 	t.len = sizeof(int) + strlen(filename);
 	
-	memcpy(t.payload, &p, t.len); 		  
+	memcpy(t.payload, &p, t.len);         
 	send_message(&t);
 	printf("[SENDER] Filename sent.\n");
 
-	/* Wait for filename ACK */	
+	/* Wait for filename ACK */ 
 	if (recv_message(&t) < 0) {
 		perror("[SENDER] Receive error");
 		return -1;
@@ -75,12 +75,12 @@ int task_0()
 	
 	p.type = TYPE2;
 	memcpy(p.payload, &file_size, sizeof(int)); //adauga lungime fisier
-	t.len = sizeof(int) * 2;	//2 inturi :type+file_size
+	t.len = sizeof(int) * 2;    //2 inturi :type+file_size
 	memcpy(t.payload, &p, t.len);
 	send_message(&t);
 	printf("[SENDER] file_size sent %d.\n",file_size);
 	
-	/* Wait for file_size ACK */	
+	/* Wait for file_size ACK */    
 	if (recv_message(&t) < 0) {
 		perror("[SENDER] Receive error");
 		return -1;
@@ -98,13 +98,11 @@ int task_0()
 	memset(&t, 0, sizeof(msg));
 
 	/* Fill the link = send window messages */
-	for (i = 0; i < window && 
-		(count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
+	for (i = 0; i < window && (count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
 		/*face MSGSIZE - sizeof(int) ca sa poata adauga si 
 		intul de la type la payload*/
 		memset(t.payload, 0, sizeof(t.payload));
 		memset(p.payload, 0, sizeof(p.payload));
-
 		p.type = TYPE3;
 		memcpy(p.payload, buffer, count);
 		t.len = sizeof(int) + count; //type + nr bytes cititi
@@ -120,8 +118,7 @@ int task_0()
 
 	/* From now on, ack clocking, i.e., a new ack will inform 
 	   us about the space released in the link */
-	for (i = 0; i < (file_size - window) && 
-		(count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
+	for (i = 0; i < (file_size - window) && (count = read(f, buffer, MSGSIZE - sizeof(int)))>0; i++) {
 		/* wait for ACK */
 		res = recv_message(&t);
 		if (res < 0) {
@@ -135,7 +132,7 @@ int task_0()
 			return -1;
 		}
 
-		printf("[SENDER]Sedining %d \n",i);	
+		printf("[SENDER]Sedining %d \n",i); 
 		/*face MSGSIZE - sizeof(int) ca sa poata adauga si 
 		intul de la type la payload*/
 		memset(t.payload, 0, sizeof(t.payload));
@@ -178,17 +175,82 @@ int task_0()
 }
 int task_1()
 {
+	int seq_nr=0;
+	int i,res,f,count;
+	my_pkt_t1 p;
+	long bdp,window;
+	int file_size;
+	struct stat f_status;
+	char buffer[MSGSIZE];
+	/*----------------this code duplicates------*/
+	/* miliseconds for delay & megabits for speed */    
+	bdp = speed * delay * 1000;
+	printf("[SENDER] BDP = %ld b(bits).\n", bdp);
 
-	sprintf(t.payload, "Hello World of PC");
-	t.len = strlen(t.payload) + 1;
-	send_message(&t);
+	/* window = number of frames in the 'network', unacked */
+	window = bdp / (FRAME_SIZE * BITS_NO); 
+	printf("[SENDER] window = %ld frames\n", window);
 
-	if (recv_message(&t) < 0) {
-		perror("[SENDER] receive error");
-	} else {
-		printf("[SENDER] Got reply with payload: %s\n", t.payload);
-	}
+	
 
+	/*opening file and getting size*/
+	f = open(filename, O_RDONLY);
+	fstat(f,&f_status);
+	file_size = (long) f_status.st_size;
+	printf("[SENDER] File size: %d\n", file_size);
+
+	/* Gonna send filename - TYPE 1 message */
+	memset(t.payload, 0, sizeof(t.payload));
+	memset(p.payload, 0, sizeof(p.payload));
+	
+	p.type = TYPE1; /*TYPE1 trimite numele fisier*/
+	/*pune in my_pkt.payload numele fisierului de trimis*/
+	printf("[SENDER]Filename is %s\n",filename);
+	memcpy(p.payload, filename, strlen(filename));
+	/*----------------this code duplicates-end------*/ 
+	t.len = 2 * sizeof(int) + strlen(filename);
+	p.seq_number = seq_nr;  //int (type) + strlen(nume) (numele fisierului)
+	memcpy(t.payload, &p, sizeof(my_pkt_t1));//pune in t.payload pe p
+
+	do {
+		send_message(&t);
+		printf("[SENDER] Filename sent.\n");
+
+		/* Wait for filename ACK */ 
+		res = recv_message_timeout(&t, 1000);
+		p = *((my_pkt_t1 *) t.payload);
+		printf("-- %d %d\n", p.seq_number, seq_nr);
+		if (p.seq_number!=seq_nr)
+			res = -1;
+	} while (res < 0);
+
+	seq_nr++;
+
+
+	/* Gonna send filesize - TYPE 2 message */
+	memset(t.payload, 0, sizeof(t.payload));
+	memset(p.payload, 0, sizeof(p.payload));
+	
+	p.type = TYPE2;
+	p.seq_number = seq_nr;
+	memcpy(p.payload, &file_size, sizeof(int)); //adauga lungime fisier
+	t.len = sizeof(int) * 3;    
+	memcpy(t.payload, &p, sizeof(my_pkt_t1));
+	
+	do {
+		send_message(&t);
+		printf("[SENDER] Filesize sent.\n");
+
+		/* Wait for filename ACK */ 
+		res = recv_message_timeout(&t, 1000);
+		p = *((my_pkt_t1 *) t.payload);
+		if (p.seq_number!=seq_nr)
+			res = -1;
+	} while (res < 0);
+
+	seq_nr++;
+
+	//close(f);
 	printf("[SENDER] Job done.\n");
 
 	return 0;

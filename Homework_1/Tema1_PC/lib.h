@@ -14,7 +14,8 @@
 #define ACK_T3		"ACK(TYPE3)"
 
 #define MSGSIZE 1400
-#define PKTSIZE		1396
+#define PKTSIZE	1396
+#define PKTSIZE1 1392
 
 typedef struct {
 	int len;
@@ -25,6 +26,12 @@ typedef struct {
 	int type;
 	char payload[PKTSIZE];	
 } my_pkt;
+
+typedef struct {
+	int type;
+	int seq_nr;	
+	char payload[PKTSIZE1];
+} my_pkt_t1;
 
 void init(char* remote,int remote_port);
 void set_local_port(int port);
