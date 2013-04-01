@@ -1,0 +1,16 @@
+- fac vectorul de msg 
+- trimit un window
+- fac recieve cat timp exptected ack <= cate frame vreau sa dau (file_dim / 1400)
+	- daca e ok (daca ack seq_number == exptected ack)
+		atunci copiez de la elem 2 la sfarsit
+		adaug la sfarsit - citesc din fisier inca unul
+			daca s-a terminat fisierul
+				scad lungime msg
+		mneahhhhhh (trimit doar primul frame)
+	- daca nu e ok
+		retrimit window
+
+
+
+
+

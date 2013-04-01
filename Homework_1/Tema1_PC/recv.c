@@ -131,7 +131,6 @@ int task_1()
 	while(1) {
 		res = recv_message(&t);
 		p = *((my_pkt_t1*) t.payload);
-		printf("[Receiver] %d", p.seq_nr);
 		if (p.seq_nr == seq_nr)
 			break;
 	}
@@ -143,9 +142,7 @@ int task_1()
 	/* Extract filename */
 	filename =(char *) malloc((t.len-sizeof(int)));
 	filename_out =(char *) malloc((t.len-sizeof(int))+strlen("recv_"));
-	printf("[RECEIVER] FIlename is %s\n", p.payload);
 	memcpy(filename, p.payload, t.len - sizeof(int));
-	printf("[RECEIVER] FIlename is %s\n", filename);
 	sprintf(filename_out, "recv_%s", filename);//numele fisierului ce va fi creat
 	printf("[RECEIVER] Filename: %s\n", filename_out);
 
@@ -161,7 +158,7 @@ int task_1()
 	send_message(&t);
 
 	seq_nr++;
-	
+
 	/* Wait for file_size */
 	memset(t.payload, 0, sizeof(t.payload));
 	while(1) {
@@ -175,8 +172,6 @@ int task_1()
 		perror("[RECEIVER] Receive message");
 		return -1;
 	}
-
-	printf("[RECEIVER] Message type: %d\n", p.type);
 	memcpy(&file_size, p.payload, sizeof(int));
 	printf("[RECEIVER] file_size: %d\n", file_size);
 
@@ -194,6 +189,38 @@ int task_1()
 	seq_nr++;
 	read_so_far = 0;
 	f = open(filename_out, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+
+	printf("[RECEIVER] Gonna wait for file chunks.\n");
+	while (read_so_far < file_size) { 
+		memset(t.payload, 0, sizeof(t.payload));
+		while(1) {
+			res = recv_message(&t);
+			p = *((my_pkt_t1*) t.payload);
+			printf("[RECEIVER] recevied %d, expecting %d\n", p.seq_nr, seq_nr);
+			if (p.seq_nr == seq_nr)
+				break;
+			if (p.type != TYPE3) {
+				perror("[RECEIVER] Receive message");
+				return -1;
+			}
+		}	
+
+		read_so_far += t.len - 2 * sizeof(int); //adica count (nr bytes cititi in sender)
+		write(f, p.payload, t.len - 2*sizeof(int));
+		memset(t.payload, 0, sizeof(t.payload));
+		memset(p.payload, 0, sizeof(p.payload));
+	
+		p.type = TYPE4;
+		p.seq_nr = seq_nr;
+		memcpy(p.payload, ACK_T3, strlen(ACK_T3));
+	  	t.len = strlen(p.payload) + 2*sizeof(int);
+		memcpy(t.payload, &p, sizeof(my_pkt_t1));
+  		send_message(&t);
+  		printf("[RECEIVER] size: %d, seq: %d\n", read_so_far, seq_nr);
+  		seq_nr++;
+	}
+		close(f);
+
 	printf("[RECEIVER] All done.\n");
 
 	return 0;
