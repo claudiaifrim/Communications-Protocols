@@ -263,7 +263,8 @@ int task_1()
 			memcpy(p.payload, buffer, count);
 			t.len = 2*sizeof(int) + count; //type + nr bytes cititi
 			memcpy(t.payload, &p, sizeof(my_pkt_t1));
-			messages_buffer[i] = t;
+			memcpy(&messages_buffer[i],&t,sizeof(t));
+			//messages_buffer[i] = t;
 		} else break;
 	}
 	/*trimit un window la inceput*/
@@ -281,15 +282,23 @@ int task_1()
 	int total_frames = file_size / MSGSIZE;
 	if(file_size % MSGSIZE > 0) total_frames++;
 	/*pentru restul pachetelor fara cele 2 trimise la inceput*/
-	while(exptected_ack-2 <= total_frames){
+	while(exptected_ack-2 <= total_frames && buffer_size!=0){
 
 		res = recv_message_timeout(&t, 1000);
-		printf("Am intrat in while, seq este %d\n",seq_nr );
+		printf("Am intrat in while, seq este %d si buffer_size este %d\n",seq_nr ,buffer_size);
 		if (res != -1){	
 
-			for(i=0,j=i+1;i<buffer_size;i++){
-				messages_buffer[i]=messages_buffer[j];
+			for(i=0;i<buffer_size;i++){
+				messages_buffer[i]=messages_buffer[i+1];
 			}
+			/*secventa afisare ce e in messages_buffer*/
+			my_pkt_t1 y;
+			for(i=0;i<buffer_size-1;i++){
+				y = *((my_pkt_t1*) messages_buffer[i].payload);
+				printf("%d ",y.seq_nr);
+			}
+			printf("\n");
+			/* end secventa de afisare*/
 			if((count = read(f, buffer, MSGSIZE - 2*sizeof(int))) > 0){
 				memset(t.payload, 0, sizeof(t.payload));
 				memset(p.payload, 0, sizeof(p.payload));
