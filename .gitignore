@@ -2,12 +2,14 @@ Homework_1/Tema1_PC/recv_fileX
 Homework_1/Tema1_PC/run_experiment.sh
 # Compiled source #
 ###################
+*.sh
 *.com
 *.class
 *.dll
 *.exe
 *.o
 *.so
+*.binary
 
 # Packages #
 ############

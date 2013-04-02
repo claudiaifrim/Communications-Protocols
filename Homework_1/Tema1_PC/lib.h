@@ -1,3 +1,11 @@
+/*
+ * Author: Flavius Tirnacop
+ * Date: 2 April 2012
+ * File: lib.h
+ * 
+ * Description:Header file with main structs
+ */
+
 #ifndef LIB
 #define LIB
 
@@ -22,11 +30,13 @@ typedef struct {
 	char payload[MSGSIZE];
 } msg;
 
+/*Structura folosita pentru task 0*/
 typedef struct {
 	int type;
 	char payload[PKTSIZE];	
 } my_pkt;
 
+/*Structura folosita pentru task 1*/
 typedef struct {
 	int type;
 	int seq_nr;	
