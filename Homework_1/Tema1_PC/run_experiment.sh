@@ -5,7 +5,7 @@ DELAY=10
 LOSS=10
 CORRUPT=0
 FILENAME=fileX
-TASK_INDEX=1
+TASK_INDEX=2
 
 killall link &>/dev/null
 killall recv &>/dev/null

@@ -297,6 +297,31 @@ int task_2()
 	send_message(&t);
 
 	seq_nr++;
+
+	/* Astept window */
+	memset(t.payload, 0, sizeof(t.payload));
+	while (1) {
+		res = recv_message(&t);
+		p = *((my_pkt_t1*) t.payload);
+		if (p.seq_nr == seq_nr)
+			break;
+	}
+	int window = 0;
+	memcpy(&window, &p.payload, sizeof(int));
+
+	/* Trimit ACK pentru window */
+	memset(t.payload, 0, sizeof(t.payload));
+	memset(p.payload, 0, sizeof(p.payload));
+	
+	p.seq_nr = seq_nr;
+	p.type = TYPE4;
+	memcpy(p.payload, ACK_T2, strlen(ACK_T2));
+  	t.len = strlen(p.payload) + 2 * sizeof(int);
+	memcpy(t.payload, &p, sizeof(my_pkt_t1));
+  	send_message(&t);
+
+  	seq_nr++;
+  	printf("[RECIEVER] Window size = %d\n",window);
 	read_so_far = 0;
 	f = open(filename_out, O_CREAT | O_WRONLY | O_TRUNC, 0644);
 	printf("[RECEIVER] All done.\n");

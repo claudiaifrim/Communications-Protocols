@@ -6,7 +6,6 @@
 		adaug la sfarsit - citesc din fisier inca unul
 			daca s-a terminat fisierul
 				scad lungime msg
-		mneahhhhhh (trimit doar primul frame)
 	- daca nu e ok
 		retrimit window
 

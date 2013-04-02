@@ -12,7 +12,7 @@
 
 static msg t;
 static char *filename;
-static int task_index, speed, delay;
+static int task_index, speed, delay,timeout;
 int task_0()
 {
 	int i,res,f,count;
@@ -218,7 +218,7 @@ int task_1()
 		printf("[SENDER] Filename sent.\n");
 
 		/* Wait for filename ACK */ 
-		res = recv_message_timeout(&t, 1000);
+		res = recv_message_timeout(&t, timeout);
 		p = *((my_pkt_t1 *) t.payload);
 		if (p.seq_nr!=seq_nr)
 			res = -1;
@@ -242,7 +242,7 @@ int task_1()
 		printf("[SENDER] Filesize sent.\n");
 
 		/* Wait for filename ACK */ 
-		res = recv_message_timeout(&t, 1000);
+		res = recv_message_timeout(&t, timeout);
 		p = *((my_pkt_t1 *) t.payload);
 		if (p.seq_nr!=seq_nr)
 			res = -1;
@@ -284,7 +284,7 @@ int task_1()
 	/*pentru restul pachetelor fara cele 2 trimise la inceput*/
 	while(exptected_ack-2 <= total_frames && buffer_size!=0){
 
-		res = recv_message_timeout(&t, 1000);
+		res = recv_message_timeout(&t, timeout);
 		printf("Am intrat in while, seq este %d si buffer_size este %d\n",seq_nr ,buffer_size);
 		if (res != -1){	
 
@@ -406,6 +406,28 @@ int task_2()
 	} while (res < 0);
 
 	seq_nr++;
+
+	/*Sending window size*/
+	memset(t.payload, 0, sizeof(t.payload));
+	memset(p.payload, 0, sizeof(p.payload));
+	
+	p.type = TYPE2;
+	p.seq_nr = seq_nr;
+	memcpy(p.payload, &window, sizeof(int)); 
+	t.len = sizeof(int) * 3;	
+	memcpy(t.payload, &p, sizeof(my_pkt_t1));
+
+	do {
+		send_message(&t);
+		/* Astept ACK pentru window */	
+		res = recv_message_timeout(&t, timeout);
+		p = *((my_pkt_t1 *) t.payload);
+		if (p.seq_nr != seq_nr)
+			res = -1;
+	} while (res < 0);
+
+	seq_nr++;
+
 	printf("[SENDER] Job done.\n");
 
 	return 0;
@@ -450,7 +472,7 @@ int main(int argc, char *argv[])
 	filename = argv[2];
 	speed = atoi(argv[3]);
 	delay = atoi(argv[4]);
-
+	timeout = 2 * delay > 1000 ? 2 * delay : 1000;
 	printf("[SENDER] Sender starts.\n");
 	printf("[SENDER] Filename=%s, task_index=%d, speed=%d, delay=%d\n", filename, task_index, speed, delay);
 
