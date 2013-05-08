@@ -2,7 +2,7 @@ CC=gcc
 LIBSOCKET=-lnsl
 CCFLAGS=-Wall -g
 SRV=server
-SEL_SRV=selectserver
+SEL_SRV=server
 CLT=client
 
 all: $(SEL_SRV) $(CLT)
