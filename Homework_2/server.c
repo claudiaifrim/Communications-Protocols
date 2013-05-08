@@ -59,7 +59,20 @@ int main(int argc, char const *argv[])
      FD_SET(sockfd, &read_fds);
      fdmax = sockfd;
 
-     
+     while (1) {
+
+     	tmp_fds = read_fds; 
+     	
+     	if (select(fdmax + 1, &tmp_fds, NULL, NULL, NULL) == -1) 
+     		error("ERROR in select");
+
+     	for(i = 0; i <= fdmax; i++) {
+     		if (FD_ISSET(i, &tmp_fds)) {
+     		}
+     	}
+     }
+
+     close(sockfd);
 
      return 0;
  }
