@@ -1,0 +1,48 @@
+TODO/Future Readme
+
+Client:
+
+1) listclients
+	Trimite cerere catre server 
+	Afiseaza la consola lista clientilor conectati
+
+2) infoclient <nume_client>
+	Trimite cerere catre server
+	Afiseaza nume_client, port, timp scurs de la conectarea lui la server
+
+3) message <nume_client> <mesaj>
+	Client_1 trimite mesaj la server pentru a cere informatii despre Client_2
+	Client_1 se conecteaza la Client_2 si trimite mesaj si inchide conexiunea
+	Client_2 accepta conecxiunea si afiseaza mesaj 
+	[Timestamp][Sursa]Mesaj
+
+4) broadcast <mesaj>
+	Client_1 trimite mesaj la server pentru a cere info despre toti clientii
+	Pe rand se conecteaza la fiecare si trimite mesaj
+
+5) sendfile <client_destinatie> <nume_fisier>
+	Client_1 cere informati la server despre Client_2
+	Serverul raspunde lui Client_1
+	Client_1 se conecteaza la Client_2 si ii cere fisierul
+	Client_2 accepta conexiunea si ii trimite intai dimensiunea fisierului
+	Client_1 primeste dimensiunea si apoi asteapta restul fisierului
+	Client_2 trimite restul fisierului
+
+6) history
+	Afiseaza toate mesajele primite si numele fisierelor primite de catre
+client
+
+7) quit
+	Trimite mesaj catre server ca va parasis istemul si Clientul inchide conexiunea
+	Serverul inchide conexiunea
+
+Comenzi Server:
+
+1) status
+	Afiseaza lista clientilor conectati, adresele lor ip si porturile pe care asculta
+2) kick <nume_client>
+	Trimite mesaj catre client ca trebuie sa se inchida
+	Clientul se inchide
+	Il elimina din lista de clienti
+3) quit
+ 	Se inchide serverul 
