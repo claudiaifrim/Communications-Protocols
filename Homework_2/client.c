@@ -15,6 +15,11 @@ void error(char *msg)
 	exit(1);
 }
 
+typedef struct{
+	int port;
+	char nume[BUFLEN];
+} date_client;
+
 int main(int argc, char const *argv[])
 {
 	int sockfd,newsockfd,listen_sockfd,n,i;
@@ -27,21 +32,6 @@ int main(int argc, char const *argv[])
 		fprintf(stderr,"Usage %s client_name server_address server_port\n", argv[0]);
 		exit(-1);
 	}
-
-	// Creaza Socket pentru conectare la server
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-	if(sockfd < 0)
-		error("ERROR opening server socket");
-
-	// Creaza serv_addr
-	memset((char *) &serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(atoi(argv[3]));
-	inet_aton(argv[2], &serv_addr.sin_addr);
-
-	// Connect to server
-	if (connect(sockfd,(struct sockaddr*) &serv_addr,sizeof(serv_addr)) < 0)
-		error((char *)"ERROR connecting to server");
 
 	// Creaza socket pentru ascultare pentru alti clienti
 	listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -61,6 +51,23 @@ int main(int argc, char const *argv[])
 	// Start listening
 	listen(listen_sockfd, MAX_CLIENTS);
 
+	// Creaza Socket pentru conectare la server
+	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+	if(sockfd < 0)
+		error("ERROR opening server socket");
+
+	// Creaza serv_addr
+	memset((char *) &serv_addr, 0, sizeof(serv_addr));
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(atoi(argv[3]));
+	inet_aton(argv[2], &serv_addr.sin_addr);
+
+	// Connect to server
+	if (connect(sockfd,(struct sockaddr*) &serv_addr,sizeof(serv_addr)) < 0)
+		error((char *)"ERROR connecting to server");
+
+	
+
 	//------------May not need this now------------//
 	// Aflu portul pe care asculta clientul
 	//socklen_t listen_len = sizeof(listen_addr);
@@ -72,8 +79,38 @@ int main(int argc, char const *argv[])
 	// Urmeaza sa verificam daca avem voie sa ne conectam sau nu
 	// Daca exista deja un user cu acelasi nume vom fi deconectati
 	
-		
+	// Aflu portul pe care asculta clientul
+	socklen_t listen_len = sizeof(listen_addr);
+	n = getsockname(listen_sockfd, (struct sockaddr *) &listen_addr, &listen_len);
+	if ( n < 0 )
+		error((char *)"ERROR getting socket details");
 
+	date_client client;
+	memset(&client, 0,sizeof(client));	
+	sprintf(client.nume,"%s",argv[1]);	//adaug numele
+	client.port = ntohs(listen_addr.sin_port); //adaug portu pe care face listen
+	// trimit la server datele
+	n = send(sockfd,&client,sizeof(client), 0);
+	if(n < 0)
+		error("ERROR sending identity to server");
+
+	memset(buffer,0,BUFLEN);
+	n = recv(sockfd,buffer,sizeof(buffer),0);
+	if(n <= 0)
+	{
+	// nu reuseste sa se conecteze din cauze unknown
+		if(n == 0) 	printf("Recv a intors 0\n");
+		else 		error("ERROR at recv");
+		close(sockfd);
+		error("ERROR Recv a intors 0");
+	}else{
+		// verifica daca a primit disconnect sau a fost acceptat
+		if(strcmp(buffer, "Disconnect") == 0)
+		{
+			close(sockfd);
+			error("Denied acces from server.Closing");
+		}
+	}
 
 
 	// Totul a fost ok acum suntem conectati
@@ -96,6 +133,10 @@ int main(int argc, char const *argv[])
     //fd_max va fi listen_fd
     fdmax = listen_sockfd;
 
+    while(1)
+    {
+
+    }
 
 
     return 0;
