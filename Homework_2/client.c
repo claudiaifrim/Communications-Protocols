@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h> 
-
+#include <arpa/inet.h>
 #define BUFLEN 256
 #define MAX_CLIENTS	10
 
@@ -18,6 +18,7 @@ void error(char *msg)
 typedef struct{
 	int port;
 	char nume[BUFLEN];
+	char ip[BUFLEN];
 } date_client;
 
 int main(int argc, char const *argv[])
@@ -86,8 +87,10 @@ int main(int argc, char const *argv[])
 		error((char *)"ERROR getting socket details");
 
 	date_client client;
+	char* ip;
 	memset(&client, 0,sizeof(client));	
 	sprintf(client.nume,"%s",argv[1]);	//adaug numele
+	sprintf(client.ip,"%s",inet_ntoa(listen_addr.sin_addr)); 	//adaug ip
 	client.port = ntohs(listen_addr.sin_port); //adaug portu pe care face listen
 	// trimit la server datele
 	n = send(sockfd,&client,sizeof(client), 0);
