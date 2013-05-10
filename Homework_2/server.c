@@ -4,25 +4,33 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
+#include <unistd.h>
 #include <arpa/inet.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+
 #define BUFLEN 256
 #define MAX_CLIENTS	10
 
 
 typedef struct{
+	int fd; // fd asignat de server
 	int port;
 	char nume[BUFLEN];
 	char ip[BUFLEN];
 } date_client;
 
 //Global variables
-int sockfd, newsockfd, portno, clilen;
+socklen_t clilen;
+int sockfd, newsockfd, portno;
 char buffer[BUFLEN],buffer_send[BUFLEN];
 struct sockaddr_in serv_addr, cli_addr;
 int n, i, j,clienti_curenti=0,debug=0;
 date_client lista_clienti[10]; //nu vor fi mai mult de 10
-
 
 fd_set read_fds;	// multimea de citire folosita in select()
 fd_set tmp_fds;	// multime folosita temporar
@@ -37,7 +45,7 @@ void error(char *msg)
 
 
 void accept_client(){
-
+	int i;
 	clilen = sizeof(cli_addr);
 	if ((newsockfd = accept(sockfd,(struct sockaddr *)&cli_addr, &clilen)) == -1) {
 		error("ERROR in accept");
@@ -73,6 +81,14 @@ void accept_client(){
 			}
 		}
 
+		// Send accept to client
+
+		memset(buffer,0,sizeof(buffer));
+		sprintf(buffer,"Accepted");
+		n = send(newsockfd,buffer,sizeof(buffer),0);
+
+
+		client.fd = newsockfd;
 		//Adaug clientul curent in lista de clienti
 		lista_clienti[clienti_curenti] = client;
 		clienti_curenti++;
@@ -82,7 +98,28 @@ void accept_client(){
 		if (newsockfd > fdmax) { 
 			fdmax = newsockfd;
 		}
-		printf("Am adaugat nou client GG\n");
+	}
+	return;
+}
+
+void remove_client(date_client client)
+{
+	return;
+}
+
+void switch_command(char* buffer)
+{
+	int i;
+	if(strncmp(buffer,"status",strlen("status")) == 0)
+	{
+		printf("\nLista clienti conectati:\n");
+		for(i = 0 ; i < clienti_curenti ; i++)
+		{
+			printf("%d.Client %s :\n",i,lista_clienti[i].nume);
+			printf("\tIp: %s Port: %d\n",lista_clienti[i].ip,
+				lista_clienti[i].port );
+		}
+
 	}
 	return;
 }
@@ -123,6 +160,7 @@ int main(int argc, char const *argv[])
      //adaugam noul file descriptor (socketul pe care se asculta conexiuni)
      // in multimea read_fds
     FD_SET(sockfd, &read_fds);
+    FD_SET(0, &read_fds);
     fdmax = sockfd;
 
     while (1) {
@@ -132,20 +170,68 @@ int main(int argc, char const *argv[])
     	if (select(fdmax + 1, &tmp_fds, NULL, NULL, NULL) == -1) 
     		error("ERROR in select");
 
-    	for(i = 0; i <= fdmax; i++) {
+    	for(i = 0; i <= f3dmax; i++) {
     		if (FD_ISSET(i, &tmp_fds)) {
-    			if (i == sockfd){
+
+    			if (i == 0){
+					// citesc de la tastatură o comandă
+    				memset(buffer, 0 , BUFLEN);
+    				fgets(buffer, BUFLEN-1, stdin);
+    				switch_command(buffer);
+    			}
+    			else if (i == sockfd){
 					// a venit ceva pe socketul inactiv(cel cu listen) 
 					// o noua conexiune
 					// actiunea serverului: accept()
     				accept_client();
     			} 
+    			else
+    			{	
+					// am primit date pe unul din socketii 
+					// cu care vorbesc cu clientii
+					// actiunea serverului: recv()
+    				memset(buffer, 0, BUFLEN);
+    				n = recv(i, buffer, sizeof(buffer), 0);
+    				if (n <= 0)
+    				{
+    					printf("ERROR at recieve from client on socket %d.",i);
+    					for (j = 0; j < clienti_curenti; j++){
+    						if (lista_clienti[j].fd == i)
+								//printeaza ca a iesit clientul
+    							printf("Clientul %s pe socket  \
+    								%d va fi scos\n", lista_clienti[j].nume, i);
+    					}
+    					for (j = 0; j < clienti_curenti; j++)
+    					{
+							//caut clientul si il scot
+    						if (lista_clienti[j].fd == i)
+    							printf("Shit\n");
+								//remove_client(lista_clienti[j]);
+    					}
+    					close(i);
+    					// scoatem din multimea de citire socketul
+    					//FD_CLR(i, &read_fds); 
+    				}
 
-    			//printf("Noua conexiune de la %s, port %d, socket_client %d\n ", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port), newsockfd);
-    		}
-    	}
-    }
-    close(sockfd);
+    				else
+					{ //nu au fost erori, am primit ceva
+						fprintf (stderr, "Am primit de la clientul de pe socketul %d, mesajul: %s\n", i, buffer);
+						char comanda[BUFLEN];
 
-    return 0;
+						// TODO
+						// Parsam comanda si aplicam functia corespunzatoare
+
+						//sscanf(buffer,"%s %*s", comanda);
+						//cerr << "COMANDA: " << comanda << endl;
+						//
+						//parse_message(buffer, comanda, i, cli_addr);
+					}
+				}
+
+			}
+		}
+	}
+	close(sockfd);
+
+	return 0;
 }
