@@ -30,7 +30,7 @@ socklen_t clilen;
 int sockfd, newsockfd, portno;
 char buffer[BUFLEN],buffer_send[BUFLEN];
 struct sockaddr_in serv_addr, cli_addr;
-int n,clienti_curenti=0,debug=0;
+int i,n,clienti_curenti=0,debug=0;
 date_client lista_clienti[10]; //nu vor fi mai mult de 10
 
 fd_set read_fds;	// multimea de citire folosita in select()
@@ -68,10 +68,10 @@ void accept_client(){
 		{
 			if(strcmp(lista_clienti[i].nume,client.nume)==0)
 			{
+				printf("Access denied:Client already connected\n");
 				memset(buffer,0,sizeof(buffer));
 				sprintf(buffer,"Disconnect");
 				n = send(newsockfd,buffer,sizeof(buffer),0);
-				printf("Access denied:Client already connected\n");
 				if(n<0){
 					printf("ERROR la trimitere Disconnect");
 					return; 
@@ -162,9 +162,14 @@ void switch_command(char* buffer){
 	//implementare kick
 	else{
 		sscanf(buffer,"%s %s",kick,kickname);
+		if(strncmp(kick,"kick",strlen("kick")) != 0)
+		{
+			fprintf(stderr, "ERROR:Unknown command\n");
+			return;
+		}
 		for(i = 0 ; i < clienti_curenti ; i++)
 		{
-			if(strncmp(lista_clienti[i].nume,kickname,sizeof(kickname))==0)
+			if(strncmp(lista_clienti[i].nume,kickname,strlen(kickname))==0)
 			{
 				printf("SERVER:Kicking user %s\n",kickname);
 				// Ii trimit mesaj ca sa se inchida
@@ -186,9 +191,53 @@ void switch_command(char* buffer){
 	return;
 }
 
+//Responsable for querys and messages recieved from clients like
+//quit notice "Disconnecting"
+//listclients notice
+//infoclient notice
+//broadcast notice
+//sendfile notice
+void switch_client_query(char* buffer){
+	int j;
+	//Daca in client se apeleaza quit
+	if(strncmp(buffer,"Disconnecting",strlen("Disconnecting")) == 0)
+	{
+		//caut intai clientul in lista dupa sockfd
+		for(j=0;j<clienti_curenti;j++)
+		{
+			if(lista_clienti[j].fd == i)
+			{
+				printf("SERVER:Clientul %s se deconecteaza.\n",
+					lista_clienti[j].nume);
+				delete_client(lista_clienti[j]);
+				close(i);
+				FD_CLR(i,&read_fds);
+				return;
+			}
+		}
+		
+	}else if(strncmp(buffer,"Listclients",strlen("Listclients")) == 0)
+	{
+		memset(buffer_send,0,BUFLEN);
+		strcat(buffer_send,"Lista clienti conectati: \n");
+		for(j=0;j<clienti_curenti;j++)
+		{
+			strcat(buffer_send,lista_clienti[j].nume);
+			strcat(buffer_send," ");
+		}
+		n = send(i,buffer_send,sizeof(buffer_send),0);
+		if(n<0){
+			fprintf(stderr,"ERROR la trimitere Listclients");
+		return; //nu oprim clientu doar afisam eroare
+	}
+}
+
+return;
+}
+
 int main(int argc, char const *argv[])
 {
-	int i, j;
+	int j;
     //Usage error
 	if (argc < 2) {
 		fprintf(stderr,"Usage : %s port\n", argv[0]);
@@ -239,12 +288,11 @@ int main(int argc, char const *argv[])
 					// citesc de la tastatură o comandă
     				memset(buffer, 0 , BUFLEN);
     				fgets(buffer, BUFLEN-1, stdin);
+    				// in functie de ce comanda primesc iau o decizie
     				switch_command(buffer);
     			}
     			else if (i == sockfd){
-					// a venit ceva pe socketul inactiv(cel cu listen) 
-					// o noua conexiune
-					// actiunea serverului: accept()
+					// Se conecteaza un nou client
     				accept_client();
     			} 
     			else
@@ -258,6 +306,7 @@ int main(int argc, char const *argv[])
     				{
     					printf("ERROR at recieve from client on socket %d",i);
     					printf("... Client hung up\n");
+
     					for (j = 0; j < clienti_curenti; j++){
     						if (lista_clienti[j].fd == i)
 								//printeaza ca a iesit clientul
@@ -277,16 +326,9 @@ int main(int argc, char const *argv[])
 
     				else
 					{ //nu au fost erori, am primit ceva
-						fprintf (stderr, "Am primit de la clientul de pe socketul %d, mesajul: %s\n", i, buffer);
-						char comanda[BUFLEN];
-
-						// TODO
-						// Parsam comanda si aplicam functia corespunzatoare
-
-						//sscanf(buffer,"%s %*s", comanda);
-						//cerr << "COMANDA: " << comanda << endl;
-						//
-						//parse_message(buffer, comanda, i, cli_addr);
+						printf("DEBUG Am primit %s\n",buffer);
+						// in functie de ce primesc de la client iau o decizie
+						switch_client_query(buffer);
 					}
 				}
 

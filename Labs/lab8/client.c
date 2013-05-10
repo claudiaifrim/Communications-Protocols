@@ -13,7 +13,6 @@ void error(char *msg)
     perror(msg);
     exit(0);
 }
-
 typedef struct {
     int socket_no;
     char payload[256];

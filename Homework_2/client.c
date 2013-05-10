@@ -29,9 +29,42 @@ typedef struct{
 	time_t timer;
 } date_client;
 
-int sockfd,newsockfd,listen_sockfd,n;
+int sockfd,newsockfd,listen_sockfd,n,i;
 struct sockaddr_in serv_addr,listen_addr,accept_addr;
 char buffer[BUFLEN],buffer_send[BUFLEN];
+
+void quit(){
+	memset(buffer_send,0,BUFLEN);
+	sprintf(buffer_send,"%s","Disconnecting");
+	n = send(sockfd,buffer_send,sizeof(buffer_send),0);
+	if(n<0){
+		close(sockfd);
+		close(listen_sockfd);
+		error("ERROR la trimitere Disconnecting");
+	}
+	close(sockfd);
+	close(listen_sockfd);
+	error("CLIENT:Shutting Down...");
+}
+
+void listclients(){
+	memset(buffer_send,0,BUFLEN);
+	sprintf(buffer_send,"%s","Listclients");
+	n = send(sockfd,buffer_send,sizeof(buffer_send),0);
+	if(n<0){
+		fprintf(stderr,"ERROR la trimitere Listclients");
+		return; //nu oprim clientu doar afisam eroare
+	}
+
+	memset(buffer,0,BUFLEN);
+	n = recv(sockfd,buffer,sizeof(buffer),0);
+	if(n<=0){
+		error("ERROR at recieve from server");
+	}else{
+		printf("%s\n", buffer);	
+	}
+	return;
+}
 
 //Responsable for client side commands like
 //TODO
@@ -47,9 +80,7 @@ void switch_command(char* buffer){
 
 	//implementare quit
 	if(strncmp(param1,"quit",strlen("quit")) == 0){
-		
-		printf("CIENT:Comanda data %s\n",param1);
-		
+		quit();		
 		return;
 	}
 	//implementare infoclient
@@ -66,6 +97,7 @@ void switch_command(char* buffer){
 		
 		return;
 	}
+	//implementare message
 	else if(strncmp(param1,"message",strlen("message")) == 0)
 	{
 
@@ -79,6 +111,7 @@ void switch_command(char* buffer){
 		
 		return;
 	}
+	//implementare broadcast
 	else if(strncmp(param1,"broadcast",strlen("broadcast")) == 0)
 	{
 
@@ -93,6 +126,7 @@ void switch_command(char* buffer){
 		return;
 
 	}
+	//implementare sendfile
 	else if(strncmp(param1,"sendfile",strlen("sendfile")) == 0)
 	{
 		if((strcmp(param2,"") == 0) || (strcmp(param3,"") == 0)) {
@@ -106,25 +140,27 @@ void switch_command(char* buffer){
 		
 		return;
 	}
+	//implementare history
 	else if(strncmp(param1,"history",strlen("history")) == 0)
 	{
 		printf("CIENT:Comanda data %s\n",param1);
 		
 		return;
 	}
+	//implementare listclients
 	else if(strncmp(param1,"listclients",strlen("listclients")) == 0)
 	{
-		printf("CIENT:Comanda data %s\n",param1);
-		
+		listclients();
 		return;
 	}
+
+	//else something is wrong
 	fprintf(stderr, "ERROR:Unknown command\n");
 	return;
 }
 
 int main(int argc, char const *argv[])
 {
-	int i;
 	// Usage error
 	if (argc < 4){
 		fprintf(stderr,"Usage %s client_name server_address server_port\n", argv[0]);
