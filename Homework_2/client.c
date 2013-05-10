@@ -66,6 +66,28 @@ void listclients(){
 	return;
 }
 
+void infoclient(char* nume_client)
+{
+	memset(buffer_send,0,BUFLEN);
+	sprintf(buffer_send,"infoclient %s",nume_client);
+	n = send(sockfd,buffer_send,sizeof(buffer_send),0);
+	if(n<0){
+		fprintf(stderr,"ERROR la trimitere cerere infoclient");
+		return; //nu oprim clientu doar afisam eroare
+	}
+
+	memset(buffer,0,BUFLEN);
+	n = recv(sockfd,buffer,sizeof(buffer),0);
+	if(n<=0){
+		error("ERROR at recieve from server");
+	}else{
+		printf("%s\n", buffer);	
+	}
+	return;
+
+	return;
+}
+
 //Responsable for client side commands like
 //TODO
 //TODO
@@ -93,7 +115,7 @@ void switch_command(char* buffer){
 			return;
 		}
 
-		printf("CIENT:Comanda data %s %s\n",param1,param2);
+		infoclient(param2);
 		
 		return;
 	}
@@ -212,7 +234,6 @@ int main(int argc, char const *argv[])
 		error((char *)"ERROR getting socket details");
 
 	date_client client;
-	char* ip;
 	memset(&client, 0,sizeof(client));	
 	sprintf(client.nume,"%s",argv[1]);	//adaug numele
 	sprintf(client.ip,"%s",inet_ntoa(listen_addr.sin_addr)); 	//adaug ip

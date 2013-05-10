@@ -220,7 +220,50 @@ void client_listclients(){
 	n = send(i,buffer_send,sizeof(buffer_send),0);
 	if(n<0)
 		fprintf(stderr,"ERROR la trimitere Listclients");
-		//nu oprim clientu doar afisam eroare
+		//nu oprim server doar afisam eroare
+	return;
+}
+
+void client_infoclient(char* nume_client){
+	int j;
+	char aux[BUFLEN];
+	time_t cur_timer;
+	double connected_time;
+	memset(buffer_send,0,BUFLEN);
+	strcat(buffer_send,"Informatii despre clientul cerut: \n");
+	//caut intai clientul in lista dupa numele sau
+	for(j=0;j<clienti_curenti;j++)
+	{
+		if(strncmp(lista_clienti[j].nume,nume_client,strlen(nume_client)) == 0)
+		{
+			//adaugam numele
+			strcat(buffer_send,"\tNume: ");
+			strcat(buffer_send,lista_clienti[j].nume);
+			//adaugam portul
+			strcat(buffer_send,"\n\tPort: ");
+			sprintf(aux,"%d",lista_clienti[j].port);
+			strcat(buffer_send,aux);
+			//adaugam timp scurs
+			time(&cur_timer);
+			connected_time = difftime(cur_timer,lista_clienti[j].timer);
+			memset(aux,0,sizeof(aux));
+			sprintf(aux,"\n\tTimp scurs de la conectare %.2fs",connected_time);
+			strcat(buffer_send,aux);
+			//dam send
+			n = send(i,buffer_send,sizeof(buffer_send),0);
+			if(n<0)
+				fprintf(stderr,"ERROR la trimitere date client");
+			//nu oprim server doar afisam eroare
+			return;
+		}
+	}
+
+	//altfel nu am gasit clientul cerut
+	memset(buffer_send,0,BUFLEN);
+	sprintf(buffer_send,"ERROR: User not found");
+	n = send(i,buffer_send,sizeof(buffer_send),0);
+	if(n<0)
+		fprintf(stderr,"ERROR la trimitere date client");
 	return;
 }
 
@@ -232,12 +275,21 @@ void client_listclients(){
 //sendfile notice
 void switch_client_query(char* buffer){
 	int j;
+	//initializari
+	char param1[BUFLEN],param2[BUFLEN],param3[BUFLEN];
+	memset(param1,0,BUFLEN);
+	memset(param2,0,BUFLEN);
+	memset(param3,0,BUFLEN);
+	sscanf(buffer,"%s %s %s",param1,param2,param3);
+
 	//Daca in client se apeleaza quit
-	if(strncmp(buffer,"Disconnecting",strlen("Disconnecting")) == 0){
+	if(strncmp(param1,"Disconnecting",strlen("Disconnecting")) == 0){
 		client_quit();	
 	// Daca in client se apeleaza listclients
-	}else if(strncmp(buffer,"Listclients",strlen("Listclients")) == 0){
+	}else if(strncmp(param1,"Listclients",strlen("Listclients")) == 0){
 		client_listclients();
+	}else if(strncmp(param1,"infoclient",strlen("infoclient")) == 0){
+		client_infoclient(param2);
 	}
 
 	return;
