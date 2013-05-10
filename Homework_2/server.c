@@ -210,12 +210,14 @@ void client_quit(){
 
 void client_listclients(){
 	int j;
+	char aux[BUFLEN];
 	memset(buffer_send,0,BUFLEN);
-	strcat(buffer_send,"Lista clienti conectati: \n");
+	strcat(buffer_send,"Lista clienti conectati: ");
 	for(j=0;j<clienti_curenti;j++)
 	{
+		sprintf(aux,"\n\t%d.",j);
+		strcat(buffer_send,aux);
 		strcat(buffer_send,lista_clienti[j].nume);
-		strcat(buffer_send," ");
 	}
 	n = send(i,buffer_send,sizeof(buffer_send),0);
 	if(n<0)
