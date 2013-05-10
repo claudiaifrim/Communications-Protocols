@@ -191,6 +191,39 @@ void switch_command(char* buffer){
 	return;
 }
 
+void client_quit(){
+	int j;
+	//caut intai clientul in lista dupa sockfd
+	for(j=0;j<clienti_curenti;j++)
+	{
+		if(lista_clienti[j].fd == i)
+		{
+			printf("SERVER:Clientul %s se deconecteaza.\n",
+				lista_clienti[j].nume);
+			delete_client(lista_clienti[j]);
+			close(i);
+			FD_CLR(i,&read_fds);
+			return;
+		}
+	}
+}
+
+void client_listclients(){
+	int j;
+	memset(buffer_send,0,BUFLEN);
+	strcat(buffer_send,"Lista clienti conectati: \n");
+	for(j=0;j<clienti_curenti;j++)
+	{
+		strcat(buffer_send,lista_clienti[j].nume);
+		strcat(buffer_send," ");
+	}
+	n = send(i,buffer_send,sizeof(buffer_send),0);
+	if(n<0)
+		fprintf(stderr,"ERROR la trimitere Listclients");
+		//nu oprim clientu doar afisam eroare
+	return;
+}
+
 //Responsable for querys and messages recieved from clients like
 //quit notice "Disconnecting"
 //listclients notice
@@ -200,39 +233,14 @@ void switch_command(char* buffer){
 void switch_client_query(char* buffer){
 	int j;
 	//Daca in client se apeleaza quit
-	if(strncmp(buffer,"Disconnecting",strlen("Disconnecting")) == 0)
-	{
-		//caut intai clientul in lista dupa sockfd
-		for(j=0;j<clienti_curenti;j++)
-		{
-			if(lista_clienti[j].fd == i)
-			{
-				printf("SERVER:Clientul %s se deconecteaza.\n",
-					lista_clienti[j].nume);
-				delete_client(lista_clienti[j]);
-				close(i);
-				FD_CLR(i,&read_fds);
-				return;
-			}
-		}
-		
-	}else if(strncmp(buffer,"Listclients",strlen("Listclients")) == 0)
-	{
-		memset(buffer_send,0,BUFLEN);
-		strcat(buffer_send,"Lista clienti conectati: \n");
-		for(j=0;j<clienti_curenti;j++)
-		{
-			strcat(buffer_send,lista_clienti[j].nume);
-			strcat(buffer_send," ");
-		}
-		n = send(i,buffer_send,sizeof(buffer_send),0);
-		if(n<0){
-			fprintf(stderr,"ERROR la trimitere Listclients");
-		return; //nu oprim clientu doar afisam eroare
+	if(strncmp(buffer,"Disconnecting",strlen("Disconnecting")) == 0){
+		client_quit();	
+	// Daca in client se apeleaza listclients
+	}else if(strncmp(buffer,"Listclients",strlen("Listclients")) == 0){
+		client_listclients();
 	}
-}
 
-return;
+	return;
 }
 
 int main(int argc, char const *argv[])
