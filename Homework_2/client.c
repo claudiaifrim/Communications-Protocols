@@ -38,6 +38,87 @@ char buffer[BUFLEN],buffer_send[BUFLEN];
 //TODO
 void switch_command(char* buffer){
 
+	//initializari
+	char param1[BUFLEN],param2[BUFLEN],param3[BUFLEN];
+	memset(param1,0,BUFLEN);
+	memset(param2,0,BUFLEN);
+	memset(param3,0,BUFLEN);
+	sscanf(buffer,"%s %s %s",param1,param2,param3);
+
+	//implementare quit
+	if(strncmp(param1,"quit",strlen("quit")) == 0){
+		
+		printf("CIENT:Comanda data %s\n",param1);
+		
+		return;
+	}
+	//implementare infoclient
+	else if(strncmp(param1,"infoclient",strlen("infoclient")) == 0)
+	{
+
+		if(strcmp(param2,"") == 0){
+			fprintf(stderr, 
+				"CIENT:Wrong command.Usage: infoclient <nume_client>\n");
+			return;
+		}
+
+		printf("CIENT:Comanda data %s %s\n",param1,param2);
+		
+		return;
+	}
+	else if(strncmp(param1,"message",strlen("message")) == 0)
+	{
+
+		if((strcmp(param2,"") == 0) || (strcmp(param3,"") == 0)) {
+			fprintf(stderr, 
+				"CIENT:Wrong command.Usage: message <nume_client> <mesaj>\n");
+			return;
+		}
+
+		printf("CIENT:Comanda data %s %s %s\n",param1,param2,param3);
+		
+		return;
+	}
+	else if(strncmp(param1,"broadcast",strlen("broadcast")) == 0)
+	{
+
+		if(strcmp(param2,"") == 0){
+			fprintf(stderr, 
+				"CIENT:Wrong command.Usage: broadcast <mesaj>\n");
+			return;
+		}
+
+		printf("CIENT:Comanda data %s %s\n",param1,param2);
+		
+		return;
+
+	}
+	else if(strncmp(param1,"sendfile",strlen("sendfile")) == 0)
+	{
+		if((strcmp(param2,"") == 0) || (strcmp(param3,"") == 0)) {
+			fprintf(stderr, 
+				"CIENT:Wrong command.Usage:"
+				"sendfile <client_destinatie> <nume_fisier>\n");
+			return;
+		}
+
+		printf("CIENT:Comanda data %s %s %s\n",param1,param2,param3);
+		
+		return;
+	}
+	else if(strncmp(param1,"history",strlen("history")) == 0)
+	{
+		printf("CIENT:Comanda data %s\n",param1);
+		
+		return;
+	}
+	else if(strncmp(param1,"listclients",strlen("listclients")) == 0)
+	{
+		printf("CIENT:Comanda data %s\n",param1);
+		
+		return;
+	}
+	fprintf(stderr, "ERROR:Unknown command\n");
 	return;
 }
 
@@ -167,36 +248,36 @@ int main(int argc, char const *argv[])
     				//Se intra aici doar in caz de "Forceclose" de la server
     				memset(buffer, 0 , BUFLEN);
     				if ((n = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
-					{
-						if (n == 0)
-						{
+    				{
+    					if (n == 0)
+    					{
 							//conexiunea s-a inchis
-							printf("ERROR: Socket with server hung up\n");
-						} else
-						{
-							error((char *)"ERROR at recv");
-						}
-						close(sockfd);
-						close(listen_sockfd);
-						printf("CLIENT: Server hung up...Shutting Down.\n");
-						exit(0);
-					}
-					else
-					{
+    						printf("ERROR: Socket with server hung up\n");
+    					} else
+    					{
+    						error((char *)"ERROR at recv");
+    					}
+    					close(sockfd);
+    					close(listen_sockfd);
+    					printf("CLIENT: Server hung up...Shutting Down.\n");
+    					exit(0);
+    				}
+    				else
+    				{
 						// Verific daca am primit forceclose
-						if (strncmp(buffer, "Forceclose", 
-							strlen("Forceclose")) == 0)
-						{
-							printf("CLIENT:Forceclose recieved from server.\n");
-							printf("CLIENT:Shutting Down...\n");
-							close(listen_sockfd);
-							close(sockfd);
-							exit(0);
-						}
+    					if (strncmp(buffer, "Forceclose", 
+    						strlen("Forceclose")) == 0)
+    					{
+    						printf("CLIENT:Forceclose recieved from server.\n");
+    						printf("CLIENT:Shutting Down...\n");
+    						close(listen_sockfd);
+    						close(sockfd);
+    						exit(0);
+    					}
 
 						// Nu ar trebui sa ajung aici
-						error("CLIENT: Unknown message from server");
-					}
+    					error("CLIENT: Unknown message from server");
+    				}
     			}
     			else if (i == listen_sockfd)
     			{
