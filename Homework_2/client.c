@@ -16,18 +16,19 @@ void error(char *msg)
 }
 
 typedef struct{
+	int fd; // fd asignat de server
 	int port;
 	char nume[BUFLEN];
 	char ip[BUFLEN];
+
 } date_client;
+
+int sockfd,newsockfd,listen_sockfd,n,i;
+struct sockaddr_in serv_addr,listen_addr,accept_addr;
+char buffer[BUFLEN],buffer_send[BUFLEN];
 
 int main(int argc, char const *argv[])
 {
-	int sockfd,newsockfd,listen_sockfd,n,i;
-	struct sockaddr_in serv_addr,listen_addr,accept_addr;
-	char buffer[BUFLEN],buffer_send[BUFLEN];
-
-
 	// Usage error
 	if (argc < 4){
 		fprintf(stderr,"Usage %s client_name server_address server_port\n", argv[0]);
