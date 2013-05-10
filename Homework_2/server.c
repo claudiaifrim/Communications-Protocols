@@ -101,7 +101,25 @@ void accept_client(){
 	}
 	return;
 }
+void delete_client(date_client delclient)
+{
+	int i,j;
+	for ( i = 0; i < clienti_curenti ; i++)
+	{
+		if(lista_clienti[i].fd == delclient.fd ) //compar dupa fd
+		{
+			//eliminal din vector
+			for(j=i;j<clienti_curenti-1;j++)
+			{
+				lista_clienti[j] = lista_clienti[j+1];
+			}
+			clienti_curenti--;
+			return;
+		}
+	}
 
+
+}
 void remove_client(date_client client)
 {
 	return;
@@ -110,6 +128,7 @@ void remove_client(date_client client)
 void switch_command(char* buffer)
 {
 	int i;
+	char kickname[BUFLEN],kick[BUFLEN];
 	if(strncmp(buffer,"status",strlen("status")) == 0)
 	{
 		printf("\nLista clienti conectati:\n");
@@ -120,7 +139,43 @@ void switch_command(char* buffer)
 				lista_clienti[i].port );
 		}
 
+	}else if (strncmp(buffer,"quit",strlen("quit")) == 0)
+	{
+		printf("SERVER:SHUTTING DOWN...Sending quit broadcast\n");
+		// Construiesc mesaj de inchidere
+		memset(buffer_send, 0 , BUFLEN);
+		sprintf(buffer_send,"%s","Forceclose");
+		for(i = 0 ; i < clienti_curenti ; i++)
+		{
+			// Trimit mesaj de inchidere
+			n = send(lista_clienti[i].fd,buffer_send,sizeof(buffer_send),0);
+			if(n<0)
+				printf("ERROR sending shut down fd %i\n",lista_clienti[i].fd);
+		}
+
+		error("SERVER: SHUT DOWN");
 	}
+	else{
+		sscanf(buffer,"%s %s",kick,kickname);
+		for(i = 0 ; i < clienti_curenti ; i++)
+		{
+			if(strncmp(lista_clienti[i].nume,kickname,sizeof(kickname))==0)
+			{
+				printf("SERVER:Kicking user %s\n",kickname);
+				// Ii trimit mesaj ca sa se inchida
+				memset(buffer_send, 0 , BUFLEN);
+				sprintf(buffer_send,"%s","Forceclose");
+				n = send(lista_clienti[i].fd,buffer_send,sizeof(buffer_send),0);
+				if(n<0)
+					printf("ERROR sending kick notice\n");
+				// Delete client from list
+				delete_client(lista_clienti[i]);
+				return;
+			}
+		}
+		printf("SERVER:User not found\n");
+	}
+	
 	return;
 }
 
@@ -170,7 +225,7 @@ int main(int argc, char const *argv[])
     	if (select(fdmax + 1, &tmp_fds, NULL, NULL, NULL) == -1) 
     		error("ERROR in select");
 
-    	for(i = 0; i <= f3dmax; i++) {
+    	for(i = 0; i <= fdmax; i++) {
     		if (FD_ISSET(i, &tmp_fds)) {
 
     			if (i == 0){
