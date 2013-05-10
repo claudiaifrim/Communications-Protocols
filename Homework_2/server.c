@@ -29,7 +29,7 @@ socklen_t clilen;
 int sockfd, newsockfd, portno;
 char buffer[BUFLEN],buffer_send[BUFLEN];
 struct sockaddr_in serv_addr, cli_addr;
-int n, i, j,clienti_curenti=0,debug=0;
+int n,clienti_curenti=0,debug=0;
 date_client lista_clienti[10]; //nu vor fi mai mult de 10
 
 fd_set read_fds;	// multimea de citire folosita in select()
@@ -37,13 +37,13 @@ fd_set tmp_fds;	// multime folosita temporar
 int fdmax;			//valoare maxima file descriptor din multimea read_fds
 
 
-void error(char *msg)
-{
+//Throws error and closes program
+void error(char *msg){
 	perror(msg);
 	exit(1);
 }
 
-
+//Accepts a client if it's not registered yet
 void accept_client(){
 	int i;
 	clilen = sizeof(cli_addr);
@@ -101,8 +101,9 @@ void accept_client(){
 	}
 	return;
 }
-void delete_client(date_client delclient)
-{
+
+//Removes client from list
+void delete_client(date_client delclient){
 	int i,j;
 	for ( i = 0; i < clienti_curenti ; i++)
 	{
@@ -117,16 +118,13 @@ void delete_client(date_client delclient)
 			return;
 		}
 	}
-
-
-}
-void remove_client(date_client client)
-{
-	return;
 }
 
-void switch_command(char* buffer)
-{
+//Responsable for server side commands like
+//status - displays list of active clients
+//kick - kicks client
+//quit - closes server
+void switch_command(char* buffer){
 	int i;
 	char kickname[BUFLEN],kick[BUFLEN];
 	if(strncmp(buffer,"status",strlen("status")) == 0)
@@ -181,7 +179,7 @@ void switch_command(char* buffer)
 
 int main(int argc, char const *argv[])
 {
-	
+	int i, j;
     //Usage error
 	if (argc < 2) {
 		fprintf(stderr,"Usage : %s port\n", argv[0]);
@@ -249,23 +247,23 @@ int main(int argc, char const *argv[])
     				n = recv(i, buffer, sizeof(buffer), 0);
     				if (n <= 0)
     				{
-    					printf("ERROR at recieve from client on socket %d.",i);
+    					printf("ERROR at recieve from client on socket %d",i);
+    					printf("... Client hung up\n");
     					for (j = 0; j < clienti_curenti; j++){
     						if (lista_clienti[j].fd == i)
 								//printeaza ca a iesit clientul
-    							printf("Clientul %s pe socket  \
-    								%d va fi scos\n", lista_clienti[j].nume, i);
+    							printf("SERVER:Clientul %s va fi scos\n", 
+    								lista_clienti[j].nume);
     					}
     					for (j = 0; j < clienti_curenti; j++)
     					{
 							//caut clientul si il scot
     						if (lista_clienti[j].fd == i)
-    							printf("Shit\n");
-								//remove_client(lista_clienti[j]);
+    							delete_client(lista_clienti[j]);
     					}
     					close(i);
     					// scoatem din multimea de citire socketul
-    					//FD_CLR(i, &read_fds); 
+    					FD_CLR(i, &read_fds); 
     				}
 
     				else
