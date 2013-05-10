@@ -22,6 +22,7 @@ typedef struct{
 	int port;
 	char nume[BUFLEN];
 	char ip[BUFLEN];
+	time_t timer;
 } date_client;
 
 //Global variables
@@ -86,15 +87,16 @@ void accept_client(){
 		memset(buffer,0,sizeof(buffer));
 		sprintf(buffer,"Accepted");
 		n = send(newsockfd,buffer,sizeof(buffer),0);
-
-
+		// Adaug timpul la care s-a conectat
+		time(&client.timer);
+		// Completez campul corespunzator fd
 		client.fd = newsockfd;
-		//Adaug clientul curent in lista de clienti
+		// Adaug clientul curent in lista de clienti
 		lista_clienti[clienti_curenti] = client;
 		clienti_curenti++;
-		//adaug noul socket intors de accept() la multimea descriptorilor de citire
+		// Adaug noul socket intors de accept() la multimea descriptorilor de citire
 		FD_SET(newsockfd, &read_fds);
-		// actualizez fdmax daca e nevoie
+		// Actualizez fdmax daca e nevoie
 		if (newsockfd > fdmax) { 
 			fdmax = newsockfd;
 		}
