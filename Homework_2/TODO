@@ -2,14 +2,21 @@ TODO/Future Readme
 
 Client:
 
-1) listclients
-	Trimite cerere catre server 
+1) listclients - DONE
 	Afiseaza la consola lista clientilor conectati
 
-2) infoclient <nume_client>
-	Trimite cerere catre server
+	Implementare:
+	-Trimite cerere catre server (mesajul Listclients)
+	-Serverul construieste lista de clienti si o trimite inapoi
+	
+2) infoclient <nume_client> DONE
 	Afiseaza nume_client, port, timp scurs de la conectarea lui la server
 
+	Implementare:
+	-Trimite cerere catre server (mesajul "infoclient nume" cu numele cerut)
+	-Serverul cauta in lista clientul respectiv
+	-Se construieste stringul de raspuns cu nume port si timpul scurs (se foloseste difftime)
+	
 3) message <nume_client> <mesaj>
 	Client_1 trimite mesaj la server pentru a cere informatii despre Client_2
 	Client_1 se conecteaza la Client_2 si trimite mesaj si inchide conexiunea
@@ -32,17 +39,31 @@ Client:
 	Afiseaza toate mesajele primite si numele fisierelor primite de catre
 client
 
-7) quit
-	Trimite mesaj catre server ca va parasis istemul si Clientul inchide conexiunea
-	Serverul inchide conexiunea
+7) quit - DONE
+	Implementare:
+	-Trimite mesaj catre server (mesajul "Disconnecting") ca va parasis istemul si inchide conexiunea
+	-Serverul parseaza raspusnsul inchide conexiunea, il scoate din read_fds
 
 Comenzi Server:
 
-1) status
+1) status - DONE
 	Afiseaza lista clientilor conectati, adresele lor ip si porturile pe care asculta
-2) kick <nume_client>
-	Trimite mesaj catre client ca trebuie sa se inchida
-	Clientul se inchide
-	Il elimina din lista de clienti
-3) quit
+
+	Implementare:
+	-La fiecare conectare a unui client la server se primesc si datele sale specifice: ip, port,nume, timp conectare.Astfel se construieste un vector de astfel de stricturi "date_client".Vectorul este de 10 elemente deoarece s-a specificat pe forum ca nu vor fi mai mult de 10 astfel de clienti.
+	-Asadar se parcurge vectorul de structuri de tip "date_client" si se afiseaza informatiile cerute.
+2) kick <nume_client> - DONE
+	Deconecteaza clientul cerut
+
+	Implementare:
+	-Trimite mesaj catre client ca trebuie sa se inchida
+	-Clientul inchide conexiunea
+	-Il elimina din vectorul de clienti si din read fds
+3) quit - DONE
  	Se inchide serverul 
+
+ 	Implementare:
+ 	-trimite mesaj catre toti clientii ca serverul se inchide
+ 	(mesajul "Forceclose")
+ 	-clientii se inchid si ei la primirea acestui mesaj
+ 	-apoi serverul se inchide
