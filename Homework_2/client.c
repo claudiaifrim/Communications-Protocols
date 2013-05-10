@@ -4,8 +4,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h> 
+#include <netdb.h>
+#include <unistd.h>
 #include <arpa/inet.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #define BUFLEN 256
 #define MAX_CLIENTS	10
 
@@ -26,6 +32,14 @@ typedef struct{
 int sockfd,newsockfd,listen_sockfd,n,i;
 struct sockaddr_in serv_addr,listen_addr,accept_addr;
 char buffer[BUFLEN],buffer_send[BUFLEN];
+
+//Responsable for client side commands like
+//TODO
+//TODO
+void switch_command(char* buffer){
+
+	return;
+}
 
 int main(int argc, char const *argv[])
 {
@@ -69,14 +83,6 @@ int main(int argc, char const *argv[])
 		error((char *)"ERROR connecting to server");
 
 	
-
-	//------------May not need this now------------//
-	// Aflu portul pe care asculta clientul
-	//socklen_t listen_len = sizeof(listen_addr);
-	//if (getsockname(listen_sockfd, (struct sockaddr *) &listen_addr, &listen_len) == -1)
-	//	error((char *)"ERROR getting socket name");
-	//------------May not need this now------------//
-
 	//-----------------------------------------------------------------------//
 	// Urmeaza sa verificam daca avem voie sa ne conectam sau nu
 	// Daca exista deja un user cu acelasi nume vom fi deconectati
@@ -116,7 +122,7 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-
+	printf("%s\n", buffer);
 	// Totul a fost ok acum suntem conectati
 	//----------------------------------------------------------------------//
 
@@ -139,9 +145,39 @@ int main(int argc, char const *argv[])
 
     while(1)
     {
+    	tmp_fds = read_fds; 
 
+    	if (select(fdmax + 1, &tmp_fds, NULL, NULL, NULL) == -1) 
+    		error("ERROR in select");
+
+    	for(i = 0; i <= fdmax; i++) {
+    		if (FD_ISSET(i, &tmp_fds)) {
+
+    			if (i == 0){
+					// citesc de la tastatură o comandă
+    				memset(buffer, 0 , BUFLEN);
+    				fgets(buffer, BUFLEN-1, stdin);
+    				switch_command(buffer);
+    			}
+
+    			else if (i == sockfd)
+    			{
+    				//Am primit ceva de la server
+    			}
+    			else if (i == listen_sockfd)
+    			{
+    				// Se conecteaza un alt client la mine
+    			}
+    			else{
+    				// Primesc date pe unul din socketii pe care
+    				// este conectat un alt client deja
+
+    			}
+
+    		}
+    	}
     }
 
-
+    close(sockfd);
     return 0;
 }
