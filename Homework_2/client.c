@@ -26,10 +26,10 @@ typedef struct{
 	int port;
 	char nume[BUFLEN];
 	char ip[BUFLEN];
-
+	time_t timer;
 } date_client;
 
-int sockfd,newsockfd,listen_sockfd,n,i;
+int sockfd,newsockfd,listen_sockfd,n;
 struct sockaddr_in serv_addr,listen_addr,accept_addr;
 char buffer[BUFLEN],buffer_send[BUFLEN];
 
@@ -43,6 +43,7 @@ void switch_command(char* buffer){
 
 int main(int argc, char const *argv[])
 {
+	int i;
 	// Usage error
 	if (argc < 4){
 		fprintf(stderr,"Usage %s client_name server_address server_port\n", argv[0]);
@@ -139,9 +140,9 @@ int main(int argc, char const *argv[])
     //adaugam fd pentru socketul de listen
     FD_SET(listen_sockfd, &read_fds);
     //adaugam fd pentru STDIN, ar trebui sa fie 0
-    FD_SET(fileno(stdin), &read_fds); 
+    FD_SET(0, &read_fds); 
     //fd_max va fi listen_fd
-    fdmax = listen_sockfd;
+    fdmax = sockfd;
 
     while(1)
     {
@@ -163,12 +164,47 @@ int main(int argc, char const *argv[])
     			else if (i == sockfd)
     			{
     				//Am primit ceva de la server
+    				//Se intra aici doar in caz de "Forceclose" de la server
+    				memset(buffer, 0 , BUFLEN);
+    				if ((n = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
+					{
+						if (n == 0)
+						{
+							//conexiunea s-a inchis
+							printf("ERROR: Socket with server hung up\n");
+						} else
+						{
+							error((char *)"ERROR at recv");
+						}
+						close(sockfd);
+						close(listen_sockfd);
+						printf("CLIENT: Server hung up...Shutting Down.\n");
+						exit(0);
+					}
+					else
+					{
+						// Verific daca am primit forceclose
+						if (strncmp(buffer, "Forceclose", 
+							strlen("Forceclose")) == 0)
+						{
+							printf("CLIENT:Forceclose recieved from server.\n");
+							printf("CLIENT:Shutting Down...\n");
+							close(listen_sockfd);
+							close(sockfd);
+							exit(0);
+						}
+
+						// Nu ar trebui sa ajung aici
+						error("CLIENT: Unknown message from server");
+					}
     			}
     			else if (i == listen_sockfd)
     			{
+    				printf("Debug\n");
     				// Se conecteaza un alt client la mine
     			}
     			else{
+    				printf("Debug\n");
     				// Primesc date pe unul din socketii pe care
     				// este conectat un alt client deja
 

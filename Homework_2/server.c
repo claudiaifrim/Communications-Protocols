@@ -129,6 +129,8 @@ void delete_client(date_client delclient){
 void switch_command(char* buffer){
 	int i;
 	char kickname[BUFLEN],kick[BUFLEN];
+
+	//implementare status
 	if(strncmp(buffer,"status",strlen("status")) == 0)
 	{
 		printf("\nLista clienti conectati:\n");
@@ -139,7 +141,9 @@ void switch_command(char* buffer){
 				lista_clienti[i].port );
 		}
 
-	}else if (strncmp(buffer,"quit",strlen("quit")) == 0)
+	}
+	//implementare quit
+	else if (strncmp(buffer,"quit",strlen("quit")) == 0)
 	{
 		printf("SERVER:SHUTTING DOWN...Sending quit broadcast\n");
 		// Construiesc mesaj de inchidere
@@ -155,6 +159,7 @@ void switch_command(char* buffer){
 
 		error("SERVER: SHUT DOWN");
 	}
+	//implementare kick
 	else{
 		sscanf(buffer,"%s %s",kick,kickname);
 		for(i = 0 ; i < clienti_curenti ; i++)
@@ -169,7 +174,9 @@ void switch_command(char* buffer){
 				if(n<0)
 					printf("ERROR sending kick notice\n");
 				// Delete client from list
+				FD_CLR(lista_clienti[i].fd,&read_fds);
 				delete_client(lista_clienti[i]);
+
 				return;
 			}
 		}
