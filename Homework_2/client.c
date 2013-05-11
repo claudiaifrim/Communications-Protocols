@@ -152,6 +152,80 @@ void message_client(char* nume_client,char* mesaj,const char* numele_meu)
 	return;
 }
 
+//trimite un mesaj catre toti clientii coenctati in acel moment
+void broadcast_message(char* mesaj,const char* numele_meu)
+{
+	date_client lista_clienti[10];
+	date_client client;
+	char mesaj_aux[BUFLEN];
+	int lungime_lista=0,j;
+
+	memset(buffer_send,0,BUFLEN);
+	sprintf(buffer_send,"broadcast");
+	n = send(sockfd,buffer_send,sizeof(buffer_send),0);
+	if(n<0){
+		fprintf(stderr,"ERROR la trimitere cerere broadcast");
+		return; //nu oprim clientu doar afisam eroare
+	}
+
+	//primesc lungimea listei
+	n = recv(sockfd,&lungime_lista,sizeof(lungime_lista),0);
+	if(n < 0){
+		error("ERROR at recieve from server");
+		return; //nu oprim serverul		
+	}
+
+	//primesc lista 
+	memset(&lista_clienti, 0,sizeof(lista_clienti));	
+	n = recv(sockfd,&lista_clienti,sizeof(lista_clienti),0);
+	if(n < 0){
+		error("ERROR at recieve from server");
+		return; //nu oprim serverul		
+	}else{ //ma conectez la fiecare si trimit mesaj
+		for(j=0;j<lungime_lista;j++)
+		{
+			if(strncmp(lista_clienti[j].nume,numele_meu,strlen(numele_meu)) != 0){
+			client = lista_clienti[j];
+			// Creaza Socket pentru conectare la server
+			newsockfd = socket(AF_INET, SOCK_STREAM, 0);
+			if(newsockfd < 0)
+				error("ERROR opening server socket");
+
+			// Creaza cli_addr
+			memset((char *) &cli_addr, 0, sizeof(cli_addr));
+			cli_addr.sin_family = AF_INET;
+			cli_addr.sin_port = htons(client.port); 
+			inet_aton(client.nume, &cli_addr.sin_addr);
+
+			// Connect to server
+			if (connect(newsockfd,(struct sockaddr*) &cli_addr,sizeof(cli_addr)) < 0)
+				error((char *)"ERROR connecting to server");
+
+			//constructie mesaj - numele meu + mesaj
+			memset(buffer_send,0,BUFLEN);
+			
+			//copiez doar partea de mesaj din ce primesc de la tastatura
+			sprintf(buffer_send,"%s %s",numele_meu,mesaj);
+			
+			//trimitere mesaj
+			n = send(newsockfd,buffer_send,sizeof(buffer_send),0);
+			if(n<0){
+				fprintf(stderr,"ERROR la trimitere cerere message");
+				close(newsockfd);
+			return; //nu oprim clientu doar afisam eroare
+			}
+
+			//deconectare
+			close(newsockfd);
+		}
+	}
+}
+
+
+
+return;
+}
+
 void recv_file()
 {
 	return;
@@ -178,6 +252,8 @@ void recv_message(char* mesaj)
 	printf("[%s][%s]:%s\n",timestring,aux,message);
 	return;
 }
+
+
 
 //Responsable for client side commands like
 //TODO
@@ -235,7 +311,7 @@ void switch_command(char* buffer,const char* numele_meu){
 			return;
 		}
 
-		printf("CIENT:Comanda data %s %s\n",param1,param2);
+		broadcast_message(param2,numele_meu);
 		
 		return;
 
@@ -450,7 +526,7 @@ int main(int argc, char const *argv[])
     				// Primesc date pe unul din socketii pe care
     				// este conectat un alt client deja
 
-    				memset(buffer, 0 , BUFLEN);
+					memset(buffer, 0 , BUFLEN);
 					if ((n = recv(i, buffer, sizeof(buffer), 0)) <= 0)
 					{
 						if (n == 0)

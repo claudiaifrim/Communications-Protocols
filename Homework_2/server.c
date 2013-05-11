@@ -299,6 +299,19 @@ void client_message(char* nume_client)
 	return;
 }
 
+void client_broadcast()
+{
+	n = send(i,&clienti_curenti,sizeof(clienti_curenti),0);
+	if(n<0){
+		fprintf(stderr,"ERROR la trimitere catre client");
+		return; //nu oprim clientu doar afisam eroare
+	}
+	n = send(i,&lista_clienti,sizeof(lista_clienti),0);
+	if(n<0){
+		fprintf(stderr,"ERROR la trimitere cerere broadcast");
+		return; //nu oprim clientu doar afisam eroare
+	}
+}
 //Responsable for querys and messages recieved from clients like
 //quit notice "Disconnecting"
 //listclients notice
@@ -324,6 +337,8 @@ void switch_client_query(char* buffer){
 		client_infoclient(param2);
 	}else if(strncmp(param1,"message",strlen("message")) == 0){
 		client_message(param2);
+	}else if(strncmp(param1,"broadcast",strlen("broadcast")) == 0){
+		client_broadcast();
 	}
 
 	return;
