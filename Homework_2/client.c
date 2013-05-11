@@ -97,7 +97,7 @@ void infoclient(char* nume_client)
 void message_client(char* nume_client,char* mesaj,const char* numele_meu)
 {
 	date_client client;
-
+	char mesaj_aux[BUFLEN];
 	//trimit cerere port client dorit
 	memset(buffer_send,0,BUFLEN);
 	sprintf(buffer_send,"message %s",nume_client);
@@ -131,7 +131,11 @@ void message_client(char* nume_client,char* mesaj,const char* numele_meu)
 
 		//constructie mesaj - numele meu + mesaj
 		memset(buffer_send,0,BUFLEN);
-		sprintf(buffer_send,"%s",mesaj);
+		//copiez doar partea de mesaj din ce primesc de la tastatura
+		//ex: "message nume_catre mesaj" - se va copia "numele_meu mesaj"
+		strcpy(mesaj_aux,mesaj+strlen(nume_client)+strlen("message")+2);
+
+		sprintf(buffer_send,"%s %s",numele_meu,mesaj_aux);
 		printf("DEBUG Am trimis:%s\n", buffer_send);	
 
 		//trimitere mesaj
@@ -156,7 +160,25 @@ void recv_file()
 
 void recv_message(char* mesaj)
 {
-	printf("DEBUG %s\n", mesaj);
+	time_t rawtime;
+	struct tm * timeinfo;
+	char message[BUFLEN];
+	char aux[BUFLEN],timestring[BUFLEN];
+
+	// get time
+	time ( &rawtime );
+	timeinfo = localtime (&rawtime);
+	strftime (timestring,BUFLEN,"%T",timeinfo);
+
+	memset(aux,0,BUFLEN);
+	memset(message,0,BUFLEN);
+	printf("DEBUG Mesaj este egal cu %s\n",mesaj );
+	//citesc numele in aux ca sa stiu cat de lung e
+	sscanf(mesaj,"%s",aux);
+	printf("DEUG %s cu %d\n",aux,strlen(aux));
+	//parsez mesajul separat de nume
+	strcpy(message,mesaj+strlen(aux)+1);
+	printf("[%s][%s]:%s\n",timestring,aux,message);
 	return;
 }
 
