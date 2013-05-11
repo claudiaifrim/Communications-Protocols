@@ -136,7 +136,6 @@ void message_client(char* nume_client,char* mesaj,const char* numele_meu)
 		strcpy(mesaj_aux,mesaj+strlen(nume_client)+strlen("message")+2);
 
 		sprintf(buffer_send,"%s %s",numele_meu,mesaj_aux);
-		printf("DEBUG Am trimis:%s\n", buffer_send);	
 
 		//trimitere mesaj
 		n = send(newsockfd,buffer_send,sizeof(buffer_send),0);
@@ -172,10 +171,8 @@ void recv_message(char* mesaj)
 
 	memset(aux,0,BUFLEN);
 	memset(message,0,BUFLEN);
-	printf("DEBUG Mesaj este egal cu %s\n",mesaj );
 	//citesc numele in aux ca sa stiu cat de lung e
 	sscanf(mesaj,"%s",aux);
-	printf("DEUG %s cu %d\n",aux,strlen(aux));
 	//parsez mesajul separat de nume
 	strcpy(message,mesaj+strlen(aux)+1);
 	printf("[%s][%s]:%s\n",timestring,aux,message);
@@ -447,11 +444,9 @@ int main(int argc, char const *argv[])
 				}
 				else if (i == listen_sockfd)
 				{
-					printf("Debug intru in accept_client\n");
 					accept_client();
 				}
 				else{
-					printf("Debug primesc ceva de la client\n");
     				// Primesc date pe unul din socketii pe care
     				// este conectat un alt client deja
 
@@ -475,9 +470,16 @@ int main(int argc, char const *argv[])
 						//recieve message or a file from other client
 						sscanf(buffer,"%s",aux);
 						if(strncmp(aux,"file",strlen("file")) == 0)
+							//primesc fisier
 							recv_file();
-						else
+
+						else{
+							//primesc mesaj
 							recv_message(buffer);
+							//il scot din fds
+							FD_CLR(i,&read_fds);
+							close(i);
+						}
 					}
 
 				}
