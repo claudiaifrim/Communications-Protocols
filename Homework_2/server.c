@@ -191,6 +191,7 @@ void switch_command(char* buffer){
 	return;
 }
 
+//sterge clientul care se deconecteaza din lista de clienti activi
 void client_quit(){
 	int j;
 	//caut intai clientul in lista dupa sockfd
@@ -208,6 +209,7 @@ void client_quit(){
 	}
 }
 
+//trimite date despre toti clientii catre clientul respectiv
 void client_listclients(){
 	int j;
 	char aux[BUFLEN];
@@ -226,6 +228,7 @@ void client_listclients(){
 	return;
 }
 
+//cauta clientul cerut si trimite date despre el
 void client_infoclient(char* nume_client){
 	int j;
 	char aux[BUFLEN];
@@ -269,6 +272,33 @@ void client_infoclient(char* nume_client){
 	return;
 }
 
+//cauta clientul cerut si trimite date despre el pentru viitoare conectare
+void client_message(char* nume_client)
+{
+	int j;
+	date_client client;
+
+	//caut intai clientul in lista dupa numele sau
+	for(j=0;j<clienti_curenti;j++)
+	{
+		if(strncmp(lista_clienti[j].nume,nume_client,strlen(nume_client)) == 0)
+		{
+			memset(&client, 0,sizeof(client));
+			client = lista_clienti[j];
+			n = send(i,&client,sizeof(client),0);
+			if(n<0)
+			{
+				fprintf(stderr,"ERROR la trimitere date client");
+				return;
+			}
+			return;
+		}
+	}
+
+	fprintf(stderr, "ERROR:Clientul cerut nu a fost gasit\n");
+	return;
+}
+
 //Responsable for querys and messages recieved from clients like
 //quit notice "Disconnecting"
 //listclients notice
@@ -292,6 +322,8 @@ void switch_client_query(char* buffer){
 		client_listclients();
 	}else if(strncmp(param1,"infoclient",strlen("infoclient")) == 0){
 		client_infoclient(param2);
+	}else if(strncmp(param1,"message",strlen("message")) == 0){
+		client_message(param2);
 	}
 
 	return;

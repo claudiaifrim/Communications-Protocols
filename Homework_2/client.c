@@ -29,9 +29,16 @@ typedef struct{
 	time_t timer;
 } date_client;
 
+//Global variables
+socklen_t clilen;
 int sockfd,newsockfd,listen_sockfd,n,i;
-struct sockaddr_in serv_addr,listen_addr,accept_addr;
+struct sockaddr_in serv_addr,listen_addr,accept_addr,cli_addr;
 char buffer[BUFLEN],buffer_send[BUFLEN];
+
+fd_set read_fds;	// multimea de citire folosita in select()
+fd_set tmp_fds;		// multime folosita temporar
+int fdmax;			// valoare maxima file descriptor din multimea read_fds
+
 
 void quit(){
 	memset(buffer_send,0,BUFLEN);
@@ -83,15 +90,80 @@ void infoclient(char* nume_client)
 	}else{
 		printf("%s\n", buffer);	
 	}
-	return;
 
+	return;
+}
+
+void message_client(char* nume_client,char* mesaj,const char* numele_meu)
+{
+	date_client client;
+
+	//trimit cerere port client dorit
+	memset(buffer_send,0,BUFLEN);
+	sprintf(buffer_send,"message %s",nume_client);
+	n = send(sockfd,buffer_send,sizeof(buffer_send),0);
+	if(n<0){
+		fprintf(stderr,"ERROR la trimitere cerere message");
+		return; //nu oprim clientu doar afisam eroare
+	}
+
+	memset(&client, 0,sizeof(client));	
+	n = recv(sockfd,&client,sizeof(client),0);
+	if(n < 0){
+		error("ERROR at recieve from server");
+		return; //nu oprim serverul		
+	}else{ //ma conectez si trimit mesaj
+
+		// Creaza Socket pentru conectare la server
+		newsockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if(newsockfd < 0)
+			error("ERROR opening server socket");
+
+		// Creaza cli_addr
+		memset((char *) &cli_addr, 0, sizeof(cli_addr));
+		cli_addr.sin_family = AF_INET;
+		cli_addr.sin_port = htons(client.port); 
+		inet_aton(client.nume, &cli_addr.sin_addr);
+
+		// Connect to server
+		if (connect(newsockfd,(struct sockaddr*) &cli_addr,sizeof(cli_addr)) < 0)
+			error((char *)"ERROR connecting to server");
+
+		//constructie mesaj - numele meu + mesaj
+		memset(buffer_send,0,BUFLEN);
+		sprintf(buffer_send,"%s",mesaj);
+		printf("DEBUG Am trimis:%s\n", buffer_send);	
+
+		//trimitere mesaj
+		n = send(newsockfd,buffer_send,sizeof(buffer_send),0);
+		if(n<0){
+			fprintf(stderr,"ERROR la trimitere cerere message");
+			close(newsockfd);
+			return; //nu oprim clientu doar afisam eroare
+		}
+
+		//deconectare
+		close(newsockfd);
+	}
+
+	return;
+}
+
+void recv_file()
+{
+	return;
+}
+
+void recv_message(char* mesaj)
+{
+	printf("DEBUG %s\n", mesaj);
 	return;
 }
 
 //Responsable for client side commands like
 //TODO
 //TODO
-void switch_command(char* buffer){
+void switch_command(char* buffer,const char* numele_meu){
 
 	//initializari
 	char param1[BUFLEN],param2[BUFLEN],param3[BUFLEN];
@@ -129,7 +201,8 @@ void switch_command(char* buffer){
 			return;
 		}
 
-		printf("CIENT:Comanda data %s %s %s\n",param1,param2,param3);
+		//trimit tot bufferul si parsez acolo separat
+		message_client(param2,buffer,numele_meu);
 		
 		return;
 	}
@@ -181,8 +254,25 @@ void switch_command(char* buffer){
 	return;
 }
 
+//accepts new connection from other client
+void accept_client(){
+	clilen = sizeof(cli_addr);
+	if ((newsockfd = accept(listen_sockfd,(struct sockaddr *)&cli_addr, &clilen)) == -1) {
+		error("ERROR in accept");
+	} 
+	else{
+		// Adaug noul socket intors de accept() la multimea descriptorilor de citire
+		FD_SET(newsockfd, &read_fds);
+		// Actualizez fdmax daca e nevoie
+		if (newsockfd > fdmax) { 
+			fdmax = newsockfd;
+		}
+	}
+}
+
 int main(int argc, char const *argv[])
 {
+	char aux[BUFLEN];
 	// Usage error
 	if (argc < 4){
 		fprintf(stderr,"Usage %s client_name server_address server_port\n", argv[0]);
@@ -265,93 +355,115 @@ int main(int argc, char const *argv[])
 	// Totul a fost ok acum suntem conectati
 	//----------------------------------------------------------------------//
 
-	fd_set read_fds;	// multimea de citire folosita in select()
-    fd_set tmp_fds;		// multime folosita temporar
-    int fdmax;			// valoare maxima file descriptor din multimea read_fds
-
+	
 	//golim multimea de descriptori de citire (read_fds) si multimea tmp_fds 
-    FD_ZERO(&read_fds);
-    FD_ZERO(&tmp_fds);
+	FD_ZERO(&read_fds);
+	FD_ZERO(&tmp_fds);
 
     //adaugam fd pentru socketul serverului
-    FD_SET(sockfd, &read_fds);
+	FD_SET(sockfd, &read_fds);
     //adaugam fd pentru socketul de listen
-    FD_SET(listen_sockfd, &read_fds);
+	FD_SET(listen_sockfd, &read_fds);
     //adaugam fd pentru STDIN, ar trebui sa fie 0
-    FD_SET(0, &read_fds); 
+	FD_SET(0, &read_fds); 
     //fd_max va fi listen_fd
-    fdmax = sockfd;
+	fdmax = sockfd;
 
-    while(1)
-    {
-    	tmp_fds = read_fds; 
+	while(1)
+	{
+		tmp_fds = read_fds; 
 
-    	if (select(fdmax + 1, &tmp_fds, NULL, NULL, NULL) == -1) 
-    		error("ERROR in select");
+		if (select(fdmax + 1, &tmp_fds, NULL, NULL, NULL) == -1) 
+			error("ERROR in select");
 
-    	for(i = 0; i <= fdmax; i++) {
-    		if (FD_ISSET(i, &tmp_fds)) {
+		for(i = 0; i <= fdmax; i++) {
+			if (FD_ISSET(i, &tmp_fds)) {
 
-    			if (i == 0){
+				if (i == 0){
 					// citesc de la tastatură o comandă
-    				memset(buffer, 0 , BUFLEN);
-    				fgets(buffer, BUFLEN-1, stdin);
-    				switch_command(buffer);
-    			}
+					memset(buffer, 0 , BUFLEN);
+					fgets(buffer, BUFLEN-1, stdin);
+					switch_command(buffer,argv[1]);
+				}
 
-    			else if (i == sockfd)
-    			{
+				else if (i == sockfd)
+				{
     				//Am primit ceva de la server
     				//Se intra aici doar in caz de "Forceclose" de la server
-    				memset(buffer, 0 , BUFLEN);
-    				if ((n = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
-    				{
-    					if (n == 0)
-    					{
+					memset(buffer, 0 , BUFLEN);
+					if ((n = recv(sockfd, buffer, sizeof(buffer), 0)) <= 0)
+					{
+						if (n == 0)
+						{
 							//conexiunea s-a inchis
-    						printf("ERROR: Socket with server hung up\n");
-    					} else
-    					{
-    						error((char *)"ERROR at recv");
-    					}
-    					close(sockfd);
-    					close(listen_sockfd);
-    					printf("CLIENT: Server hung up...Shutting Down.\n");
-    					exit(0);
-    				}
-    				else
-    				{
+							printf("ERROR: Socket with server hung up\n");
+						} else
+						{
+							error((char *)"ERROR at recv");
+						}
+						close(sockfd);
+						close(listen_sockfd);
+						printf("CLIENT: Server hung up...Shutting Down.\n");
+						exit(0);
+					}
+					else
+					{
 						// Verific daca am primit forceclose
-    					if (strncmp(buffer, "Forceclose", 
-    						strlen("Forceclose")) == 0)
-    					{
-    						printf("CLIENT:Forceclose recieved from server.\n");
-    						printf("CLIENT:Shutting Down...\n");
-    						close(listen_sockfd);
-    						close(sockfd);
-    						exit(0);
-    					}
+						if (strncmp(buffer, "Forceclose", 
+							strlen("Forceclose")) == 0)
+						{
+							printf("CLIENT:Forceclose recieved from server.\n");
+							printf("CLIENT:Shutting Down...\n");
+							close(listen_sockfd);
+							close(sockfd);
+							exit(0);
+						}
 
 						// Nu ar trebui sa ajung aici
-    					error("CLIENT: Unknown message from server");
-    				}
-    			}
-    			else if (i == listen_sockfd)
-    			{
-    				printf("Debug\n");
-    				// Se conecteaza un alt client la mine
-    			}
-    			else{
-    				printf("Debug\n");
+						error("CLIENT: Unknown message from server");
+					}
+				}
+				else if (i == listen_sockfd)
+				{
+					printf("Debug intru in accept_client\n");
+					accept_client();
+				}
+				else{
+					printf("Debug primesc ceva de la client\n");
     				// Primesc date pe unul din socketii pe care
     				// este conectat un alt client deja
 
-    			}
+    				memset(buffer, 0 , BUFLEN);
+					if ((n = recv(i, buffer, sizeof(buffer), 0)) <= 0)
+					{
+						if (n == 0)
+						{
+							//conexiunea s-a inchis
+							printf("ERROR: Socket with client hung up\n");
+						} else
+						{
+							error((char *)"ERROR at recv from client");
+						}
+						close(i);
+						FD_CLR(i,&read_fds);
+						printf("CLIENT: Client hung up...Closing connection.\n");
+					}
+					else
+					{
+						//recieve message or a file from other client
+						sscanf(buffer,"%s",aux);
+						if(strncmp(aux,"file",strlen("file")) == 0)
+							recv_file();
+						else
+							recv_message(buffer);
+					}
 
-    		}
-    	}
-    }
+				}
 
-    close(sockfd);
-    return 0;
+			}
+		}
+	}
+
+	close(sockfd);
+	return 0;
 }
