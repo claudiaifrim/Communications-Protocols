@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#define BUFLEN 256
+#define BUFLEN 1024
 #define MAX_CLIENTS	10
 
 void error(char *msg)
@@ -31,10 +31,11 @@ typedef struct{
 
 //Global variables
 socklen_t clilen;
-int sockfd,newsockfd,listen_sockfd,n,i;
+int sockfd,newsockfd,listen_sockfd,n,i,conectat=0,filedescriptor;
+int dimensiune_fisier=0,read_bytes=0,write_bytes=0,socket_send_file;
 struct sockaddr_in serv_addr,listen_addr,accept_addr,cli_addr;
-char buffer[BUFLEN],buffer_send[BUFLEN];
-
+char buffer[BUFLEN],buffer_send[BUFLEN],history[BUFLEN],write_filename[BUFLEN];
+struct stat stat_buf;
 fd_set read_fds;	// multimea de citire folosita in select()
 fd_set tmp_fds;		// multime folosita temporar
 int fdmax;			// valoare maxima file descriptor din multimea read_fds
@@ -114,7 +115,7 @@ void message_client(char* nume_client,char* mesaj,const char* numele_meu)
 		return; //nu oprim serverul		
 	}else{ //ma conectez si trimit mesaj
 
-		// Creaza Socket pentru conectare la server
+		// Creaza Socket pentru conectare la client
 		newsockfd = socket(AF_INET, SOCK_STREAM, 0);
 		if(newsockfd < 0)
 			error("ERROR opening server socket");
@@ -127,15 +128,15 @@ void message_client(char* nume_client,char* mesaj,const char* numele_meu)
 
 		// Connect to server
 		if (connect(newsockfd,(struct sockaddr*) &cli_addr,sizeof(cli_addr)) < 0)
-			error((char *)"ERROR connecting to server");
+			error((char *)"ERROR connecting to client");
 
 		//constructie mesaj - numele meu + mesaj
 		memset(buffer_send,0,BUFLEN);
 		//copiez doar partea de mesaj din ce primesc de la tastatura
-		//ex: "message nume_catre mesaj" - se va copia "numele_meu mesaj"
+		//ex: "message nume_catre mesaj" - se va copia "message numele_meu mesaj"
 		strcpy(mesaj_aux,mesaj+strlen(nume_client)+strlen("message")+2);
 
-		sprintf(buffer_send,"%s %s",numele_meu,mesaj_aux);
+		sprintf(buffer_send,"message %s %s",numele_meu,mesaj_aux);
 
 		//trimitere mesaj
 		n = send(newsockfd,buffer_send,sizeof(buffer_send),0);
@@ -157,7 +158,6 @@ void broadcast_message(char* mesaj,const char* numele_meu)
 {
 	date_client lista_clienti[10];
 	date_client client;
-	char mesaj_aux[BUFLEN];
 	int lungime_lista=0,j;
 
 	memset(buffer_send,0,BUFLEN);
@@ -185,8 +185,153 @@ void broadcast_message(char* mesaj,const char* numele_meu)
 		for(j=0;j<lungime_lista;j++)
 		{
 			if(strncmp(lista_clienti[j].nume,numele_meu,strlen(numele_meu)) != 0){
-			client = lista_clienti[j];
+				client = lista_clienti[j];
 			// Creaza Socket pentru conectare la server
+				newsockfd = socket(AF_INET, SOCK_STREAM, 0);
+				if(newsockfd < 0)
+					error("ERROR opening server socket");
+
+			// Creaza cli_addr
+				memset((char *) &cli_addr, 0, sizeof(cli_addr));
+				cli_addr.sin_family = AF_INET;
+				cli_addr.sin_port = htons(client.port); 
+				inet_aton(client.nume, &cli_addr.sin_addr);
+
+			// Connect to server
+				if (connect(newsockfd,(struct sockaddr*) &cli_addr,sizeof(cli_addr)) < 0)
+					error((char *)"ERROR connecting to server");
+
+			//constructie mesaj - numele meu + mesaj
+				memset(buffer_send,0,BUFLEN);
+
+			//copiez doar partea de mesaj din ce primesc de la tastatura
+				sprintf(buffer_send,"message %s %s",numele_meu,mesaj);
+
+			//trimitere mesaj
+				n = send(newsockfd,buffer_send,sizeof(buffer_send),0);
+				if(n<0){
+					fprintf(stderr,"ERROR la trimitere cerere message");
+					close(newsockfd);
+			return; //nu oprim clientu doar afisam eroare
+		}
+
+			//deconectare
+		close(newsockfd);
+	}
+}
+}
+
+
+
+return;
+}
+
+void recv_message(char* mesaj)
+{
+	time_t rawtime;
+	struct tm * timeinfo;
+	char message[BUFLEN],aux2[BUFLEN];
+	char aux[BUFLEN],timestring[BUFLEN],history_add[BUFLEN];
+
+	// get time
+	time ( &rawtime );
+	timeinfo = localtime (&rawtime);
+	strftime (timestring,BUFLEN,"%T",timeinfo);
+
+	memset(aux,0,BUFLEN);
+	memset(message,0,BUFLEN);
+	//citesc numele in aux ca sa stiu cat de lung e
+	sscanf(mesaj,"%s %s",aux2,aux);
+	//parsez mesajul separat de nume
+	strcpy(message,mesaj+strlen(aux)+strlen("message")+2);
+	printf("DEBUG message =%s\n",message);
+	printf("[%s][%s]:%s\n",timestring,aux,message);
+	sprintf(history_add,"[%s][%s]:%s\n",timestring,aux,message);
+	strcat(history,history_add);
+	return;
+}
+
+void recv_file(char* buff)
+{
+	//char buff[1024];
+	if(conectat!=1){
+
+		conectat = 1;
+		write_bytes = 0;
+
+		//primeste nume fisier
+		/*memset(write_filename,0,sizeof(write_filename));
+		n = recv(i,&write_filename,sizeof(write_filename),0);
+		if(n < 0){
+			error("ERROR at recieve from client");
+		}*/
+		strcat(write_filename,buff);
+		strcat(write_filename,"_primit");
+		//primeste dimensiune
+		memset(&dimensiune_fisier,0,sizeof(dimensiune_fisier));
+		n = recv(i,&dimensiune_fisier,sizeof(dimensiune_fisier),0);
+		if(n < 0){
+			error("ERROR at recieve from client");
+		}
+
+		printf("DEBUG Am primit dimensiune fisier %d\n",dimensiune_fisier );
+		
+		printf("DEBUG Output se va numi %s \n", write_filename);
+		//deschidem fisier pentru scriere
+		filedescriptor = open(write_filename,O_WRONLY|O_CREAT|O_TRUNC,0644);
+	}
+	
+	if(write_bytes == dimensiune_fisier)
+	{
+		close(filedescriptor);
+		conectat=0;
+		close(i);
+		FD_CLR(i,&read_fds);
+	}
+
+	//n = recv(i,&buff,sizeof(buff),0);
+	//if(n<0)
+	//	error("ERROR at recieve from client");
+	write_bytes+=write(filedescriptor,&buff,1024);
+
+	printf("Primesc o bucata de rahat.write_bytes = %d\n",write_bytes);
+	//recieve chunk
+	
+	return;
+
+}
+
+void send_file(char* nume_client,char* nume_fisier)
+{
+	date_client client;
+	char buff[1024];
+	if(conectat!=1)
+	{
+		conectat = 1;
+		//conecteazate la client
+		//trimite la server cerere informatii client
+		//deschide fisier pt citire
+		//trimite dimensiune fisier
+
+		//trimit cerere port client dorit
+		memset(buffer_send,0,BUFLEN);
+		sprintf(buffer_send,"message %s",nume_client);
+		n = send(sockfd,buffer_send,sizeof(buffer_send),0);
+		if(n<0){
+			fprintf(stderr,"ERROR la trimitere cerere port");
+			return; //nu oprim clientu doar afisam eroare
+		}
+
+		memset(&client, 0,sizeof(client));	
+		n = recv(sockfd,&client,sizeof(client),0);
+		if(n < 0){
+			error("ERROR at recieve from server");
+			return; //nu oprim serverul		
+		}else{ //ma conectez si trimit mesaj
+
+		//conectare client
+
+			// Creaza Socket pentru conectare la client
 			newsockfd = socket(AF_INET, SOCK_STREAM, 0);
 			if(newsockfd < 0)
 				error("ERROR opening server socket");
@@ -197,63 +342,64 @@ void broadcast_message(char* mesaj,const char* numele_meu)
 			cli_addr.sin_port = htons(client.port); 
 			inet_aton(client.nume, &cli_addr.sin_addr);
 
-			// Connect to server
-			if (connect(newsockfd,(struct sockaddr*) &cli_addr,sizeof(cli_addr)) < 0)
+			// Connect to client
+			if (connect(newsockfd,(struct sockaddr*) &cli_addr,
+				sizeof(cli_addr)) < 0)
 				error((char *)"ERROR connecting to server");
 
-			//constructie mesaj - numele meu + mesaj
-			memset(buffer_send,0,BUFLEN);
-			
-			//copiez doar partea de mesaj din ce primesc de la tastatura
-			sprintf(buffer_send,"%s %s",numele_meu,mesaj);
-			
-			//trimitere mesaj
-			n = send(newsockfd,buffer_send,sizeof(buffer_send),0);
-			if(n<0){
-				fprintf(stderr,"ERROR la trimitere cerere message");
-				close(newsockfd);
-			return; //nu oprim clientu doar afisam eroare
+			// Adaug in read_fds
+			FD_SET(newsockfd,&read_fds);
+			if (newsockfd > fdmax) { 
+				fdmax = newsockfd;
 			}
 
-			//deconectare
-			close(newsockfd);
+			filedescriptor = open(nume_fisier,O_RDONLY);
+			if (filedescriptor == -1) {
+				fprintf(stderr, "ERROR unable to open '%s'\n", nume_fisier);
+				exit(1);
+			}
+
+			//trimit nume fisier
+			memset(buffer,0,BUFLEN);
+			sprintf(buffer,"%s",nume_fisier);
+			n = send(newsockfd,&buffer,strlen(buffer),0);
+			if (n<0)
+				error("ERROR at sending file name");
+
+			 /* get the size of the file to be sent */
+			fstat(filedescriptor, &stat_buf);
+			dimensiune_fisier=stat_buf.st_size;
+			n = send(newsockfd,&stat_buf.st_size,sizeof(stat_buf.st_size),0);
+			if (n<0)
+				error("ERROR at sending file size");
+			printf("DEBUG Lungime fisier=%d\n",dimensiune_fisier);
+
+    		
+			printf("DEBUG Nume fisier ce trimit %s\n",buffer );
+			socket_send_file = newsockfd;
+			read_bytes=0;
 		}
+
 	}
-}
 
+	if(read_bytes == dimensiune_fisier)
+	{
+		close(filedescriptor);
+		conectat=0;
+		close(socket_send_file);
+		FD_CLR(socket_send_file,&read_fds);
+	}
 
-
-return;
-}
-
-void recv_file()
-{
+	//trimite bucata
+	printf("Trimit o bucata de rahat\n");
+	memset(buff,0,sizeof(buff));
+	read_bytes += read(filedescriptor,buff,1024);
+	n = send(socket_send_file,&buff,sizeof(buff),0);
+	if(n<0)
+		error("ERROR at sending file chunk");
+	
 	return;
 }
-
-void recv_message(char* mesaj)
-{
-	time_t rawtime;
-	struct tm * timeinfo;
-	char message[BUFLEN];
-	char aux[BUFLEN],timestring[BUFLEN];
-
-	// get time
-	time ( &rawtime );
-	timeinfo = localtime (&rawtime);
-	strftime (timestring,BUFLEN,"%T",timeinfo);
-
-	memset(aux,0,BUFLEN);
-	memset(message,0,BUFLEN);
-	//citesc numele in aux ca sa stiu cat de lung e
-	sscanf(mesaj,"%s",aux);
-	//parsez mesajul separat de nume
-	strcpy(message,mesaj+strlen(aux)+1);
-	printf("[%s][%s]:%s\n",timestring,aux,message);
-	return;
-}
-
-
 
 //Responsable for client side commands like
 //TODO
@@ -326,15 +472,15 @@ void switch_command(char* buffer,const char* numele_meu){
 			return;
 		}
 
-		printf("CIENT:Comanda data %s %s %s\n",param1,param2,param3);
+		send_file(param2,param3);
 		
 		return;
 	}
 	//implementare history
 	else if(strncmp(param1,"history",strlen("history")) == 0)
 	{
-		printf("CIENT:Comanda data %s\n",param1);
-		
+		printf("History:\n");
+		printf("%s\n", history);
 		return;
 	}
 	//implementare listclients
@@ -348,6 +494,8 @@ void switch_command(char* buffer,const char* numele_meu){
 	fprintf(stderr, "ERROR:Unknown command\n");
 	return;
 }
+
+
 
 //accepts new connection from other client
 void accept_client(){
@@ -545,17 +693,18 @@ int main(int argc, char const *argv[])
 					{
 						//recieve message or a file from other client
 						sscanf(buffer,"%s",aux);
-						if(strncmp(aux,"file",strlen("file")) == 0)
-							//primesc fisier
-							recv_file();
+						printf("DEBUG Buffer este %s\n",buffer );
+//						if(strncmp(aux,"message",strlen("message")) == 0){
 
-						else{
 							//primesc mesaj
 							recv_message(buffer);
 							//il scot din fds
 							FD_CLR(i,&read_fds);
 							close(i);
-						}
+//						}else{
+							//primesc fisier
+//							recv_file(buffer);
+//						}
 					}
 
 				}

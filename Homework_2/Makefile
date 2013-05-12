@@ -2,16 +2,16 @@ CC=gcc
 LIBSOCKET=-lnsl
 CCFLAGS=-Wall -g
 SRV=server
-SEL_SRV=selectserver
+SEL_SRV=server
 CLT=client
 
 all: $(SEL_SRV) $(CLT)
 
 $(SEL_SRV):$(SEL_SRV).c
-		$(CC) -o $(SEL_SRV) $(LIBSOCKET) $(SEL_SRV).c
+		$(CC) -o $(SEL_SRV) $(LIBSOCKET) $(SEL_SRV).c $(CCFLAGS)
 
 $(CLT):	$(CLT).c
-		$(CC) -o $(CLT) $(LIBSOCKET) $(CLT).c
+		$(CC) -o $(CLT) $(LIBSOCKET) $(CLT).c $(CCFLAGS)
 
 clean:
 		rm -f *.o *~

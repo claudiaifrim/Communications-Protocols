@@ -17,15 +17,21 @@ Client:
 	-Serverul cauta in lista clientul respectiv
 	-Se construieste stringul de raspuns cu nume port si timpul scurs (se foloseste difftime)
 	
-3) message <nume_client> <mesaj>
+3) message <nume_client> <mesaj> DONE
+
 	Client_1 trimite mesaj la server pentru a cere informatii despre Client_2
 	Client_1 se conecteaza la Client_2 si trimite mesaj si inchide conexiunea
 	Client_2 accepta conecxiunea si afiseaza mesaj 
 	[Timestamp][Sursa]Mesaj
 
-4) broadcast <mesaj>
-	Client_1 trimite mesaj la server pentru a cere info despre toti clientii
-	Pe rand se conecteaza la fiecare si trimite mesaj
+4) broadcast <mesaj> DONE
+	Trimite un mesaj catre toti clientii conectati in acel moment
+
+	Implementare:
+
+	-Trimite un mesaj catre server pentru a ii cere lista de clienti
+	conectati in acel moment
+	-Pe rand trimite mesaj catre fiecare client.Intai cere serverului portul si apoi se conecteaza la client, trimite si se deconecteaza.
 
 5) sendfile <client_destinatie> <nume_fisier>
 	Client_1 cere informati la server despre Client_2
